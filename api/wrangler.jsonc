@@ -13,7 +13,7 @@
     {
       "binding": "DB",
       "database_name": "colloscope-db",
-      "database_id": "PASTE_D1_DATABASE_ID_HERE",
+      "database_id": "0760fc52-6806-48ee-8c54-dfb28ac5db10",
       "migrations_dir": "migrations"
     }
   ]
