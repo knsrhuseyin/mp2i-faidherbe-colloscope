@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "colloscope-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-26",
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "http://localhost:8080,http://127.0.0.1:8080,https://CHANGE-ME.pages.dev"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "colloscope-db",
+      "database_id": "PASTE_D1_DATABASE_ID_HERE",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
