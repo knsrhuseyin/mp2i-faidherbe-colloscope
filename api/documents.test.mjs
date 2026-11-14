@@ -139,6 +139,7 @@ globalThis.fetch=async()=>{throw new Error('network details must remain private'
 await dispatchDocumentAnnouncements(env);await dispatchDocumentAnnouncements(env,Date.now()+600000);
 assert.equal(sqlite.prepare("SELECT state FROM document_announcements WHERE item_id=?").get(ambiguous.id).state,'uncertain');
 assert.ok(!sqlite.prepare('SELECT last_error FROM document_discord').get().last_error.includes('network details'));
+assert.ok((await(await call('/api/admin/documents',admin)).json()).discord.find(d=>d.id==='english').error.includes('sans confirmation'));
 globalThis.fetch=async url=>{assert.equal(url,'https://token.actions.githubusercontent.com/.well-known/jwks');return new Response(JSON.stringify({keys:[jwk]}));};
 assert.equal((await call('/api/admin/documents/password',admin,{password:'another-class-pass-67'})).status,200);
 assert.equal((await call('/api/documents/items',token)).status,401,'Password rotation revokes sessions');

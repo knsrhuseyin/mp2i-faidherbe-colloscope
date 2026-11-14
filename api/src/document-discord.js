@@ -13,8 +13,8 @@ async function key(env){if(!env.SESSION_SECRET)throw new Error('Configuration Di
 async function seal(env,source,value){const iv=crypto.getRandomValues(new Uint8Array(12));return encode(iv)+'.'+encode(await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:enc.encode(source)},await key(env),enc.encode(value)));}
 async function unseal(env,source,value){const [iv,data]=value.split('.');return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:decode(iv),additionalData:enc.encode(source)},await key(env),decode(data)));}
 export async function discordSettings(env){
-  const rows=(await env.DB.prepare('SELECT source_id,enabled,updated_at,last_sent_at,last_error FROM document_discord').all()).results;
-  return Object.entries(subjects).map(([id,label])=>{const row=rows.find(r=>r.source_id===id);return {id,label,configured:!!row,enabled:!!row?.enabled,last_sent_at:row?.last_sent_at||null,error:row?.last_error||null};});
+  const rows=(await env.DB.prepare('SELECT d.source_id,d.enabled,d.updated_at,d.last_sent_at,d.last_error,(SELECT COUNT(*) FROM document_announcements a WHERE a.source_id=d.source_id AND a.state='uncertain') AS uncertain FROM document_discord d').all()).results;
+  return Object.entries(subjects).map(([id,label])=>{const row=rows.find(r=>r.source_id===id);return {id,label,configured:!!row,enabled:!!row?.enabled,last_sent_at:row?.last_sent_at||null,error:row?.uncertain?row.uncertain+' envoi(s) sans confirmation. Vérifie le salon Discord pour éviter un doublon.':row?.last_error||null};});
 }
 export async function saveDiscord(env,input){
   if(!Object.hasOwn(subjects,input.id)||typeof input.enabled!=='boolean')throw new Error('Paramètres Discord invalides');
