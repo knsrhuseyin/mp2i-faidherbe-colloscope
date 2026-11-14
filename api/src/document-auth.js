@@ -33,7 +33,7 @@ export async function documentLogin(request,env,body){
   return {token:await issueDocumentToken(env,row.version),expires_in:7*86400};
 }
 export async function changeDocumentPassword(env,password){
-  if(typeof password!=='string'||password.length<10||password.length>200)throw new Error('Mot de passe Documents invalide : entre 10 et 200 caractères.');
+  if(typeof password!=='string'||password.length<5||password.length>200)throw new Error('Mot de passe Documents invalide : entre 5 et 200 caractères.');
   const {salt,password_hash}=await hashDocumentPassword(password);
   await env.DB.prepare(`INSERT INTO document_access(id,salt,password_hash,version,updated_at) VALUES(1,?,?,?,?)
     ON CONFLICT(id) DO UPDATE SET salt=excluded.salt,password_hash=excluded.password_hash,version=excluded.version,updated_at=excluded.updated_at`)

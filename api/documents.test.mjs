@@ -56,7 +56,9 @@ await call('/api/documents/collector-error',collector,{source:'english',revision
 assert.ok((await(await call('/api/documents/sources',token)).json()).sources[0].error);
 assert.equal((await call('/api/admin/documents/password',admin,{password:'another-class-pass-67'})).status,200);
 assert.equal((await call('/api/documents/items',token)).status,401,'Password rotation revokes sessions');
-assert.equal((await call('/api/admin/documents/password',admin,{password:'short'})).status,400);
+assert.equal((await call('/api/admin/documents/password',admin,{password:'1234'})).status,400);
+assert.equal((await call('/api/admin/documents/password',admin,{password:'HX167'})).status,200);
+assert.equal((await call('/api/documents/login',null,{password:'HX167'},'192.0.2.6')).status,200);
 await call('/api/admin/documents/source',admin,{id:'english',root_url:'https://drive.google.com/drive/folders/OtherFolder1234'});
 assert.equal((await call('/api/documents/ingest',collector,{...base,items:[],complete:true,expected_count:2})).status,409,'Stale collectors cannot publish after source changes');
 for(let n=0;n<8;n++)assert.equal((await call('/api/documents/login',null,{password:'bad'},'192.0.2.5')).status,401);
