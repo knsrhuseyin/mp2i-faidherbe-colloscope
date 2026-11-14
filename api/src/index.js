@@ -1,3 +1,4 @@
+import { documentRoute } from "./documents.js";
 import { pushRoute, dispatchReminders } from "./notifications.js";
 import { normaliseAppearance } from "../../front/theme-core.mjs";
 import DEFAULT_DATA from "./default-data.js";
@@ -220,6 +221,11 @@ async function handle(request, env) {
   }
   if (!originIsAllowed(request, env)) return json(request, env, { error: "Origine refusée" }, 403);
 
+  if (url.pathname.startsWith("/api/documents/") || url.pathname.startsWith("/api/admin/documents")) {
+    const result = await documentRoute(request, env, await tokenIsValid(request, env));
+    const { status = 200, ...body } = result;
+    return json(request, env, body, status);
+  }
   if (url.pathname.startsWith("/api/push/")) {
     const result = await pushRoute(request, env, (await readCurrentData(env)).data);
     const { status = 200, ...body } = result;
@@ -271,7 +277,7 @@ export default {
     } catch (error) {
       console.error(error);
       const message = error instanceof Error ? error.message : "Erreur interne";
-      const clientError = /invalide|inconnu|manquant|JSON|volumineux|semaine|créneau|groupe|période|thème|apparence|chevauch/i.test(message);
+      const clientError = /invalide|inconnu|manquant|JSON|volumineux|semaine|créneau|groupe|période|thème|apparence|chevauch|document|source|métadonnée|catalogue|lot|adresse|lien|dossier/i.test(message);
       return json(request, env, { error: clientError ? message : "Erreur interne" }, clientError ? 400 : 500);
     }
   },

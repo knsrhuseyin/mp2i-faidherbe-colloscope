@@ -1,3 +1,4 @@
+import { renderDocumentsAdmin } from "./documents.js";
 import { setAppearance, renderAppearanceEditor, normaliseAppearance } from "./appearance.js";
 const GROUP_KEY = "collo-group-v2";
 const ADMIN_TOKEN_KEY = "collo-admin-token";
@@ -306,6 +307,7 @@ function showAdminApp() {
   renderSlotList();
   renderWeekEditor();
   renderAppearanceEditor(adminDraft.appearance);
+  renderDocumentsAdmin();
 }
 
 async function openAdmin() {
@@ -482,6 +484,8 @@ $$('[data-admin-tab]').forEach((button) => button.addEventListener("click", () =
   $("#slotsPanel").classList.toggle("hidden", button.dataset.adminTab !== "slots");
   $("#weeksPanel").classList.toggle("hidden", button.dataset.adminTab !== "weeks");
   $("#appearancePanel").classList.toggle("hidden", button.dataset.adminTab !== "appearance");
+  $("#documentsAdminPanel").classList.toggle("hidden", button.dataset.adminTab !== "documents");
+  $("#saveAdmin").hidden = button.dataset.adminTab === "documents";
 }));
 $("#jsonFile").addEventListener("change", async (event) => {
   const file = event.target.files[0];

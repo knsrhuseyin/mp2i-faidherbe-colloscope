@@ -1,0 +1,100 @@
+const API=String(window.COLLOSCOPE_CONFIG?.API_URL||'').replace(/\/+$/,'');
+const KEY='collo-documents-token';
+const $=s=>document.querySelector(s);
+const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+let source='',parent='',offset=0,query='',sources=[],sequence=0;
+async function request(path,options={},admin=false){
+  const headers=new Headers(options.headers||{});
+  const token=admin?sessionStorage.getItem('collo-admin-token'):localStorage.getItem(KEY)||sessionStorage.getItem('collo-admin-token');
+  if(token)headers.set('authorization','Bearer '+token);
+  if(options.body)headers.set('content-type','application/json');
+  const response=await fetch(API+path,{...options,headers,cache:'no-store'});
+  const payload=await response.json();
+  if(!response.ok){const error=new Error(payload.error||'Documents momentanément indisponibles.');error.status=response.status;throw error;}
+  return payload;
+}
+function loginView(message=''){
+  $('#documentsLogin').hidden=false;$('#documentsLibrary').hidden=true;
+  $('#documentLoginError').textContent=message;
+  $('#documentsItems').replaceChildren();$('#documentBreadcrumbs').replaceChildren();$('#documentSubjects').replaceChildren();$('#documentSourceState').textContent='';$('#documentOriginalSource').href='#';$('#documentSearch').value='';source='';parent='';offset=0;query='';sources=[];sequence++;
+}
+function date(value){if(!value)return 'En attente de synchronisation';return new Intl.DateTimeFormat('fr-FR',{dateStyle:'short',timeStyle:'short'}).format(new Date(value));}
+function size(value){if(!value)return '';return value>=1e6?(value/1e6).toFixed(1)+' Mo':Math.max(1,Math.round(value/1e3))+' ko';}
+function kind(item){if(item.kind==='folder')return 'DOSSIER';if(item.mime.includes('pdf'))return 'PDF';if(item.mime.startsWith('audio'))return 'AUDIO';if(item.mime.startsWith('video'))return 'VIDÉO';if(item.mime.startsWith('image'))return 'IMAGE';return item.name.includes('.')?item.name.split('.').at(-1).toUpperCase().slice(0,7):'FICHIER';}
+function sourceTabs(){
+  $('#documentSubjects').innerHTML=`<button class="filter ${!source?'active':''}" data-document-source="" type="button">Récents</button>`+sources.map(s=>`<button class="filter ${source===s.id?'active':''}" type="button" data-document-source="${s.id}">${escape(s.label)}</button>`).join('');
+  $('#documentSubjects').querySelectorAll('button').forEach(button=>button.onclick=()=>{source=button.dataset.documentSource;parent='';offset=0;query='';$('#documentSearch').value='';sourceTabs();loadItems();});
+}
+async function loadItems(){
+  const current=++sequence;
+  const params=new URLSearchParams({source,parent,q:query,offset:String(offset)});
+  $('#documentsItems').innerHTML='<p class="empty">Chargement des documents…</p>';
+  try{
+    const result=await request('/api/documents/items?'+params);
+    if(current!==sequence)return;
+    const selected=sources.find(s=>s.id===source);
+    $('#documentSourceState').textContent=selected?`${selected.label} · ${selected.item_count} fichiers · ${date(selected.synced_at)}${selected.error?' · Synchronisation indisponible, dernier catalogue conservé.':''}`:'Les derniers fichiers des trois matières.';
+    const original=$('#documentOriginalSource');original.hidden=!selected; if(selected){original.href=selected.url;original.textContent='Ouvrir la source';}
+    $('#documentBreadcrumbs').innerHTML=source?`<button type="button" data-document-folder="">${escape(selected?.label||source)}</button>`+(result.breadcrumbs||[]).map(c=>`<span aria-hidden="true">/</span><button type="button" data-document-folder="${escape(c.id)}">${escape(c.name)}</button>`).join(''):'';
+    $('#documentBreadcrumbs').querySelectorAll('button').forEach(button=>button.onclick=()=>{parent=button.dataset.documentFolder;offset=0;query='';$('#documentSearch').value='';loadItems();});
+    $('#documentsItems').innerHTML=result.items.length?result.items.map(item=>{
+      const privateArchive=item.source_id==='maths'&&new URL(item.url).hostname==='drive.google.com'&&item.kind==='file';
+      const meta=[!source?sources.find(s=>s.id===item.source_id)?.label:'',query?item.path:'',size(item.size),item.modified_at?new Intl.DateTimeFormat('fr-FR',{dateStyle:'short'}).format(new Date(item.modified_at)):''].filter(Boolean).map(escape).join(' · ');
+      const content=`<span class="document-type">${kind(item)}</span><span class="document-label"><strong>${escape(item.name)}</strong><small>${meta||'Document de la classe'}</small>${privateArchive?'<small class="document-note">Archive Drive privée : compte autorisé requis.</small>':''}</span><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="${item.kind==='folder'?'m9 5 7 7-7 7':'M7 17 17 7M7 7h10v10'}"/></svg></span>`;
+      return item.kind==='folder'?`<button class="document-row" type="button" data-document-child="${escape(item.id)}" data-document-subject="${item.source_id}">${content}</button>`:`<a class="document-row" href="${escape(item.url)}" target="_blank" rel="noopener noreferrer">${content}</a>`;
+    }).join(''):'<p class="empty">'+(query?'Aucun fichier trouvé.':selected&&!selected.synced_at?'Le premier catalogue de cette matière est en préparation. Tu peux déjà ouvrir sa source.':'Aucun document dans ce dossier.')+'</p>';
+    $('#documentsItems').querySelectorAll('[data-document-child]').forEach(button=>button.onclick=()=>{source=button.dataset.documentSubject;parent=button.dataset.documentChild;offset=0;query='';$('#documentSearch').value='';sourceTabs();loadItems();});
+    $('#documentPageInfo').textContent=result.total?`${offset+1}–${Math.min(offset+50,result.total)} sur ${result.total}`:'0 fichier';
+    $('#documentPrevious').disabled=offset===0;$('#documentNext').disabled=offset+50>=result.total;
+  }catch(error){if(current!==sequence)return;if(error.status===401){localStorage.removeItem(KEY);return loginView('Ta session a expiré ou le mot de passe a changé.');}$('#documentsItems').innerHTML='<p class="empty">'+escape(error.message)+'</p>';}
+}
+async function openDocuments(){
+  $('#documentsDialog').showModal();
+  try{
+    const session=await request('/api/documents/session');
+    if(!session.authenticated)return loginView();
+    sources=(await request('/api/documents/sources')).sources;
+    $('#documentsLogin').hidden=true;$('#documentsLibrary').hidden=false;
+    sourceTabs();await loadItems();
+  }catch(error){loginView(error.message);}
+}
+$('#documentsOpen').onclick=openDocuments;
+$('#mobileDocuments').onclick=openDocuments;
+$('#documentsClose').onclick=()=>$('#documentsDialog').close();
+$('#documentLoginForm').onsubmit=async event=>{
+  event.preventDefault();const button=$('#documentLoginButton');button.disabled=true;$('#documentLoginError').textContent='';
+  try{const result=await request('/api/documents/login',{method:'POST',body:JSON.stringify({password:$('#documentPassword').value})});localStorage.setItem(KEY,result.token);$('#documentPassword').value='';$('#documentsDialog').close();await openDocuments();}
+  catch(error){$('#documentLoginError').textContent=error.message;}finally{button.disabled=false;}
+};
+$('#documentLogout').onclick=()=>{localStorage.removeItem(KEY);loginView('Déconnecté de l’espace Documents.');};
+let timer;
+$('#documentSearch').oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>{query=$('#documentSearch').value.trim();offset=0;loadItems();},250);};
+$('#documentPrevious').onclick=()=>{offset=Math.max(0,offset-50);loadItems();};
+$('#documentNext').onclick=()=>{offset+=50;loadItems();};
+$('#documentsDialog').addEventListener('close',()=>{sequence++;clearTimeout(timer);$('#documentPassword').value='';});
+
+export async function renderDocumentsAdmin(){
+  const panel=$('#documentsAdminPanel');
+  panel.innerHTML='<p class="help">Chargement des paramètres Documents…</p>';
+  try{
+    const settings=await request('/api/admin/documents',{},true);
+    panel.innerHTML=`<div class="appearance-heading"><div><h3>Les fichiers de HX1</h3><p>Le catalogue est accessible avec un mot de passe de classe. Ces réglages ont leurs propres boutons d’enregistrement.</p></div></div>
+      <section class="document-admin-access"><h4>Mot de passe de classe</h4><p class="help">${settings.password_configured?'Un mot de passe est défini. Il n’est jamais affiché ni récupérable.':'Définis le mot de passe pour ouvrir l’accès aux élèves.'} Le changer déconnectera toutes les sessions Documents. La session de consultation dure au maximum sept jours.</p>
+      <form id="documentPasswordForm"><label class="field"><span>Nouveau mot de passe (10 caractères minimum)</span><input id="newDocumentPassword" type="password" minlength="10" maxlength="200" autocomplete="new-password" required></label><label class="field"><span>Confirmer</span><input id="confirmDocumentPassword" type="password" minlength="10" maxlength="200" autocomplete="new-password" required></label><button class="primary" type="submit">Enregistrer le mot de passe</button><p id="documentAdminPasswordStatus" role="status"></p></form></section>
+      <h4>Sources du catalogue</h4><p class="help">La synchronisation se fait en arrière-plan. En cas d’erreur, le dernier catalogue reste disponible. Changer une source vide son ancien catalogue jusqu’à la prochaine synchronisation.</p>
+      <div id="documentSourceEditors">${Object.entries({maths:'Mathématiques',english:'Anglais',physics:'Physique'}).map(([id,label])=>{const s=settings.sources.find(s=>s.id===id);return `<form class="document-source-editor" data-document-source-form="${id}"><h5>${label}</h5><p class="help">${s?`${s.item_count} fichiers · ${date(s.synced_at)}${s.error?' · '+escape(s.error):''}`:'Source à configurer'}</p><label class="field"><span>${id==='physics'?'Lien du partage Nuage':'Lien du dossier Drive'}</span><input name="root_url" type="url" maxlength="600" value="${escape(s?.root_url||'')}" required></label><button class="secondary" type="submit">Enregistrer cette source</button><p role="status"></p></form>`;}).join('')}</div><button type="button" class="secondary" id="documentRefreshAdmin">Actualiser l’état</button>`;
+    $('#documentPasswordForm').onsubmit=async event=>{
+      event.preventDefault();const status=$('#documentAdminPasswordStatus'),button=event.target.querySelector('button');
+      if($('#newDocumentPassword').value!==$('#confirmDocumentPassword').value){status.textContent='Les mots de passe ne correspondent pas.';return;}
+      button.disabled=true;
+      try{await request('/api/admin/documents/password',{method:'POST',body:JSON.stringify({password:$('#newDocumentPassword').value})},true);event.target.reset();localStorage.removeItem(KEY);status.textContent='Mot de passe enregistré. Les anciennes sessions Documents sont déconnectées.';}
+      catch(error){status.textContent=error.message;}finally{button.disabled=false;}
+    };
+    panel.querySelectorAll('[data-document-source-form]').forEach(form=>form.onsubmit=async event=>{
+      event.preventDefault();const button=form.querySelector('button'),status=form.querySelector('[role=status]');button.disabled=true;
+      try{await request('/api/admin/documents/source',{method:'POST',body:JSON.stringify({id:form.dataset.documentSourceForm,root_url:form.elements.root_url.value})},true);status.textContent='Source enregistrée. Le collecteur la prendra en compte au prochain passage.';}
+      catch(error){status.textContent=error.message;}finally{button.disabled=false;}
+    });
+    $('#documentRefreshAdmin').onclick=renderDocumentsAdmin;
+  }catch(error){panel.innerHTML='<p class="form-error">'+escape(error.message)+'</p>';}
+}

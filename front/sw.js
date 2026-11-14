@@ -1,6 +1,6 @@
 // Cache only the app shell. Never cache API calls or admin responses.
-const CACHE = "collo-shell-v6";
-const SHELL = ["./", "./index.html", "./style.css", "./appearance.css", "./app.js", "./appearance.js", "./icon-art.mjs", "./manifest-core.mjs", "./icons/badge-hx1.png", "./theme-core.mjs", "./assets/christmas-night.svg", "./assets/christmas-garland.svg", "./assets/christmas-postcard.svg", "./config.js", "./notifications.js", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png"];
+const CACHE = "collo-shell-v7";
+const SHELL = ["./", "./index.html", "./style.css", "./appearance.css", "./app.js", "./appearance.js", "./documents.js", "./documents.css", "./icon-art.mjs", "./manifest-core.mjs", "./icons/badge-hx1.png", "./theme-core.mjs", "./assets/christmas-night.svg", "./assets/christmas-garland.svg", "./assets/christmas-postcard.svg", "./config.js", "./notifications.js", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png"];
 for (const theme of ["midnight", "indigo", "lavender", "polar", "sand", "sage", "christmas", "halloween"]) {
   SHELL.push(`./icons/favicons/${theme}.svg`, `./icons/themes/${theme}.svg`, `./icons/themes/${theme}-192.png`, `./icons/themes/${theme}-512.png`);
 }
