@@ -41,8 +41,6 @@ function apply() {
   document.documentElement.dataset.decoration = theme.decoration;
   const mark = $("#seasonMark");
   if (mark) mark.textContent = symbols[theme.decoration];
-  const badge = $("#activeTheme");
-  if (badge) badge.textContent = theme.name;
   const meta = $('meta[name="theme-color"]');
   if (meta) meta.content = theme.colors.paper;
 }
