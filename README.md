@@ -165,3 +165,5 @@ Le manifeste d’installation est servi par la Pages Function `functions/manifes
 L’écran d’accueil reste géré par iOS/Android : son icône ne peut pas être remplacée de force par une page web. Android peut la mettre à jour ultérieurement ; sur iPhone, une réinstallation depuis Safari peut être nécessaire. Après réinstallation, vérifier les permissions et les rappels. Les nouvelles notifications utilisent l’icône du thème actif à l’heure de leur envoi ; les notifications déjà reçues ne changent pas.
 
 Les sources vectorielles sont dans `icon-art.mjs` et `icons/themes/*.svg`, avec les PNG pré-rendus correspondants. Après modification du dessin des modèles, régénérer leurs PNG et incrémenter `ICON_VERSION` dans `manifest-core.mjs` ainsi que la version du cache dans `sw.js`.
+
+Les favicons utilisent une variante transparente distincte (`themeFaviconSvg` et `icons/favicons/*.svg`) avec un contraste adapté au navigateur clair ou sombre. Les PNG de l’application installée gardent leur fond plein. Après modification d’un dessin, régénérer également ses variantes de favicon et incrémenter la version de leur URL dans `index.html` ainsi que celle du cache.

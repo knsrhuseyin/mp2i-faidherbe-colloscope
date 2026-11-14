@@ -1,5 +1,5 @@
 import { THEMES, COLOR_FIELDS, DEFAULT_APPEARANCE, catalogue, normaliseAppearance, resolveTheme, parisDate } from "./theme-core.mjs";
-import { themeIconSvg } from "./icon-art.mjs";
+import { themeIconSvg, themeFaviconSvg } from "./icon-art.mjs";
 import { iconPath, ICON_VERSION } from "./manifest-core.mjs";
 export { normaliseAppearance };
 const $ = s => document.querySelector(s);
@@ -15,7 +15,7 @@ function updateIcons(theme) {
   iconKey = key;
   const svg = themeIconSvg(theme);
   const favicon = document.querySelector('link[rel="icon"]');
-  if (favicon) favicon.href = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  if (favicon) favicon.href = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(themeFaviconSvg(theme));
   const apple = document.querySelector('link[rel="apple-touch-icon"]');
   if (apple) apple.href = new URL(iconPath(theme), document.baseURI).href;
   const manifest = document.querySelector('link[rel="manifest"]');

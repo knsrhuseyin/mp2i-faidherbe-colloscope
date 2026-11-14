@@ -1,6 +1,6 @@
 // Self-contained SVG artwork; no remote fonts, images or user-supplied markup.
 const escape = v => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
-const text = (value, x, y, size, color, family = 'Arial,sans-serif') => `<text x="${x}" y="${y}" text-anchor="middle" font-family="${family}" font-size="${size}" font-weight="900" letter-spacing="-4" fill="${color}">${value}</text>`;
+const text = (value, x, y, size, color, family = 'Arial,sans-serif') => `<text class="${value === '67' ? 'icon-reference' : 'icon-monogram'}" x="${x}" y="${y}" text-anchor="middle" font-family="${family}" font-size="${size}" font-weight="900" letter-spacing="-4" fill="${color}">${value}</text>`;
 export function themeIconSvg(theme) {
   const c = theme.colors;
   const bg = c.paper, accent = c.lime, ink = c.accentInk;
@@ -36,4 +36,34 @@ export function themeIconSvg(theme) {
   // A discreet class reference that remains clear at app-icon sizes.
   art += `<rect x="176" y="213" width="49" height="29" rx="9" fill="${theme.id === 'christmas' ? '#a72e38' : accent}"/>${text('67',199,234,22,theme.id === 'christmas' ? '#fff3df' : ink)}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="512" height="512" fill="none"><title>HX1 · 67 · ${escape(theme.name)}</title>${art}</svg>`;
+}
+
+// Browser tabs need a transparent canvas, unlike installed-app icons.
+// Adjust floating lettering for the browser's light/dark appearance as well.
+function tabInk(hex, dark) {
+  const initial = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  const luminance = rgb => rgb.map(v => { v /= 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+  const background = dark ? luminance([41, 42, 45]) : 1;
+  let color = initial;
+  for (let i = 0; i <= 20; i++) {
+    color = initial.map(v => Math.round(v + ((dark ? 255 : 0) - v) * i / 20));
+    const l = luminance(color);
+    if ((Math.max(l, background) + .05) / (Math.min(l, background) + .05) >= 4.5) break;
+  }
+  return '#' + color.map(v => v.toString(16).padStart(2, '0')).join('');
+}
+export function themeFaviconSvg(theme) {
+  let svg = themeIconSvg(theme)
+    .replace(/<rect width="256" height="256" fill="#[0-9a-fA-F]{6}"\/>/, '');
+  if (theme.id === 'lavender') svg = svg.replace(/<rect x="35" y="89" width="187" height="77" rx="19" fill="#[0-9a-fA-F]{6}"\/>/, '');
+  if (theme.id === 'christmas') svg = svg.replace(/<path d="M0 217[^"]*" fill="#eae4cc"\/>/, '');
+  let styles = '';
+  if (!['sage', 'sand', 'indigo', 'polar'].includes(theme.id)) {
+    styles = `.icon-monogram{fill:${tabInk(theme.colors.lime, false)}}@media(prefers-color-scheme:dark){.icon-monogram{fill:${tabInk(theme.colors.lime, true)}}}`;
+  }
+  if (theme.id === 'polar') {
+    svg = svg.replace('stroke="#f5f8ff" stroke-width="20"', 'class="icon-electric" stroke="#f5f8ff" stroke-width="20"');
+    styles = `.icon-electric{stroke:${tabInk(theme.colors.lime, false)}}@media(prefers-color-scheme:dark){.icon-electric{stroke:#f5f8ff}}`;
+  }
+  return svg.replace('<title>', `<style>${styles}</style><title>`);
 }
