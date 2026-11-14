@@ -8,7 +8,7 @@ export const THEMES = [
   theme("polar", "Bleu polaire", colors("#edf4f9", "#ffffff", "#142c41", "#6b8598", "#dce8f0", "#1769db", "#ffffff")),
   theme("sand", "Sable & terracotta", colors("#f7f1e8", "#fffcf7", "#42342b", "#958576", "#e8ddd0", "#b95437", "#fff7ee")),
   theme("sage", "Sauge & forêt", colors("#f0f4ef", "#fcfefb", "#203d30", "#7b8e80", "#dde6dc", "#326b50", "#f4fff6")),
-  theme("christmas", "Noël", colors("#0e211c", "#18352c", "#fff8ee", "#b1c8ba", "#315246", "#efb8aa", "#3d1916"), "snow"),
+  theme("christmas", "Noël", colors("#071d27", "#102c2b", "#fff6e7", "#bccdc4", "#39574f", "#e5c382", "#231a12"), "snow"),
   theme("halloween", "Halloween", colors("#1b1325", "#2a2035", "#fff3e6", "#b5a4c7", "#483551", "#ffa75e", "#341904"), "pumpkins"),
 ];
 export const COLOR_FIELDS = { paper: "Fond", white: "Cartes", ink: "Texte", muted: "Texte secondaire", line: "Bordures", lime: "Accent", accentInk: "Texte sur l’accent" };

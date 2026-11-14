@@ -14,6 +14,8 @@ function dark(colors) {
 function paint(element, theme) {
   for (const [key, value] of Object.entries(theme.colors)) element.style.setProperty("--" + (key === "accentInk" ? "accent-ink" : key), value);
   element.dataset.theme = dark(theme.colors) ? "dark" : "light";
+  element.dataset.decoration = theme.decoration;
+  element.dataset.season = theme.id === "christmas" ? "christmas" : "";
 }
 function apply() {
   const theme = resolveTheme(current);

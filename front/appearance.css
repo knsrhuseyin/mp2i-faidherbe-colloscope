@@ -5,3 +5,31 @@ body{letter-spacing:-.015em}.topbar{background:var(--paper);color:var(--ink);box
 @media(max-width:900px){.theme-period{grid-template-columns:1fr 1fr}.theme-period .field:first-child{grid-column:1/-1}.theme-period button{grid-column:2}.period-enabled{grid-column:1}.theme-columns{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.brand small,.active-theme{display:none}.topbar{padding-top:max(13px,env(safe-area-inset-top));padding-bottom:13px}.top-actions>#notificationsOpen{display:none}.page-intro{margin:5px 0 20px}.page-intro h1{font-size:1.8rem}main{padding-bottom:calc(100px + env(safe-area-inset-bottom))}.next-card{padding:24px;min-height:235px}.next-main{margin-top:25px;gap:16px}.next-subject{font-size:2.35rem}.next-meta{font-size:.9rem}.next-time{font-size:1.5rem}.stats{display:flex;overflow-x:auto;padding:0 0 8px;gap:8px}.stat-card{flex:0 0 120px;min-height:100px;padding:13px}.stat-card:first-child{flex-basis:130px}.stat-value{font-size:1.5rem}.stat-label{font-size:.72rem}.stat-dot{margin-bottom:8px}.mobile-nav{display:flex;justify-content:space-around;position:fixed;z-index:25;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom))}.mobile-nav button{border:0;background:transparent;color:var(--muted);display:grid;justify-items:center;gap:5px;min-width:80px;min-height:46px;font-size:.7rem}.mobile-nav button:first-child{color:var(--ink);font-weight:800}.mobile-nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.palette-grid{grid-template-columns:1fr 1fr}.theme-columns{grid-template-columns:1fr}.theme-preview-section{max-width:390px;width:100%}.admin-panel input:not([type=color]):not([type=checkbox]),.admin-panel select,.reminders-dialog input{font-size:16px}.theme-create{flex-wrap:wrap}.theme-create .field{flex-basis:100%}.theme-period{grid-template-columns:1fr}.theme-period .field,.theme-period .field:first-child,.theme-period button,.period-enabled{grid-column:1}.appearance-heading{flex-wrap:wrap}.palette-swatches i{width:23px;height:23px}.palette-choice{padding:11px}.admin-tabs{overflow:auto}.admin-tab{padding:12px 10px;white-space:nowrap}dialog{max-height:calc(100% - 24px)}.admin-dialog{height:calc(100% - 24px)}.welcome-form{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+
+/* Christmas illustrations are local assets; the rest of the catalogue stays unchanged. */
+.season-scene{display:none;pointer-events:none}
+html[data-season="christmas"] .season-scene{display:block;position:fixed;inset:0;z-index:0;background:linear-gradient(180deg,#071d2766,#071d2722 60%,#071d2788),url("./assets/christmas-night.svg") center bottom/cover no-repeat}
+html[data-season="christmas"] main{position:relative;z-index:1}
+html[data-season="christmas"] .topbar{background:#0b2628ed;border-bottom-color:#e5c38240;backdrop-filter:blur(16px)}
+html[data-season="christmas"] .brand-mark{background:#a72e38;border-color:#e5c382;color:#fff6e7;box-shadow:0 0 0 3px #e5c38212}
+html[data-season="christmas"] .page-intro{background:url("./assets/christmas-garland.svg") center top/100% auto no-repeat;padding-top:90px;padding-bottom:7px;margin-top:-25px}
+html[data-season="christmas"] .page-intro::after{content:"✦ Édition Noël";display:block;color:#e5c382;text-transform:uppercase;font-size:.72rem;letter-spacing:.18em;font-weight:800;margin-top:14px}
+html[data-season="christmas"] .page-intro h1{color:#fff6e7;text-shadow:0 2px 15px #071d27}
+html[data-season="christmas"] .page-intro .eyebrow{color:#c8d8ce}
+html[data-season="christmas"] .next-card,.theme-preview[data-season="christmas"] .theme-mini-hero{color:#fff6e7;border:1px solid #e5c38299;background-color:#a72e38;background-image:linear-gradient(90deg,#a72e38 0%,#a72e38fa 36%,#a72e38b3 65%,#a72e3811 100%),url("./assets/christmas-postcard.svg");background-position:center,right bottom;background-size:cover,auto 100%;background-repeat:no-repeat;box-shadow:0 14px 35px #03191f40}
+html[data-season="christmas"] .next-card::after{display:none}
+html[data-season="christmas"] .next-card .eyebrow{color:#ffe4ab;opacity:1;letter-spacing:.16em}
+html[data-season="christmas"] .next-card .next-main{position:relative;z-index:1}
+html[data-season="christmas"] .next-card .next-badge{background:#79212c99;border-color:#edc99188}
+html[data-season="christmas"] .season-mark{color:#f8d895;opacity:.9;font-size:1.6rem}
+html[data-season="christmas"] .stat-card,html[data-season="christmas"] .session{border-color:#e5c38233;box-shadow:0 4px 18px #041c2226}
+html[data-season="christmas"] .session-date{color:#eed29a}
+html[data-season="christmas"] .week-btn:not(.active),html[data-season="christmas"] .empty{background:#102c2be6}
+html[data-season="christmas"] .mobile-nav{background:#0b2628f5;border-top-color:#e5c38255;backdrop-filter:blur(16px)}
+html[data-season="christmas"] .mobile-nav button:first-child{color:#e5c382}
+html[data-season="christmas"] .update-note{background:#0b2628ed;border:1px solid #e5c38233;padding:18px;border-radius:15px}
+.theme-preview[data-season="christmas"]{background:linear-gradient(#071d2766,#071d27aa),url("./assets/christmas-night.svg") center bottom/cover no-repeat;border-color:#e5c38277}
+.theme-preview[data-season="christmas"] .preview-top{background:url("./assets/christmas-garland.svg") center top/130% auto no-repeat;padding-top:25px}
+.theme-preview[data-season="christmas"] .theme-mini-hero{background-size:cover,auto 100%;min-height:145px;padding:18px 13px;text-shadow:0 1px 6px #79212c77}
+.theme-preview[data-season="christmas"] .preview-row{color:#fff6e7}
+@media(max-width:760px){html[data-season="christmas"] .season-scene{background-position:center,bottom center;background-size:cover,auto 110vh}html[data-season="christmas"] .page-intro{padding-top:65px;margin-top:-15px;background-size:690px auto}html[data-season="christmas"] .next-card{min-height:255px;background-size:cover,auto 100%}html[data-season="christmas"] .next-meta{max-width:90%;text-shadow:0 1px 8px #79212c88}html[data-season="christmas"] .next-card .next-subject{font-size:2.35rem}html[data-season="christmas"] .page-intro h1{font-size:1.8rem}}

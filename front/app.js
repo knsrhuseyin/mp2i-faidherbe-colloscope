@@ -225,7 +225,14 @@ function renderWeeks() {
     activeWeek = Number(button.dataset.week);
     render();
   }));
-  requestAnimationFrame(() => $(".week-btn.active")?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }));
+  requestAnimationFrame(() => {
+    const strip = $("#weekStrip");
+    const active = strip.querySelector(".week-btn.active");
+    if (!active) return;
+    const left = active.getBoundingClientRect().left - strip.getBoundingClientRect().left + strip.scrollLeft - (strip.clientWidth - active.clientWidth) / 2;
+    // Center the week horizontally without moving the whole page on load.
+    strip.scrollTo({ left, behavior: "smooth" });
+  });
 }
 
 function renderSessions(items, now) {
