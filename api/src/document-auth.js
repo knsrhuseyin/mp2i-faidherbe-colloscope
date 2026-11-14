@@ -42,19 +42,21 @@ export async function changeDocumentPassword(env,password){
 }
 let githubKeys=null,keysUntil=0;
 export async function collectorSession(request){
+  const reject=reason=>{console.warn("Documents collector auth: "+reason);return false;};
   try{
     const token=(request.headers.get('authorization')||'').replace(/^Bearer /,'');
-    if(token.length>16000)return false;
-    const [h,p,s,extra]=token.split('.');if(extra||!h||!p||!s)return false;
+    if(token.length>16000)return reject('size');
+    const [h,p,s,extra]=token.split('.');if(extra||!h||!p||!s)return reject('format');
     const header=JSON.parse(new TextDecoder().decode(decode(h))),claims=JSON.parse(new TextDecoder().decode(decode(p)));
     const now=Date.now()/1000;
-    if(header.alg!=='RS256'||![claims.exp,claims.nbf,claims.iat].every(Number.isFinite)||claims.iss!=='https://token.actions.githubusercontent.com'||claims.aud!=='collo-document-catalogue'||claims.exp<=now||claims.nbf>now+30||claims.iat<now-600||claims.iat>now+30||claims.exp>now+600||claims.sub!=='repo:knsrhuseyin/cahier-de-prepa-sync:ref:refs/heads/main'||claims.repository!=='knsrhuseyin/cahier-de-prepa-sync'||claims.workflow_ref!=='knsrhuseyin/cahier-de-prepa-sync/.github/workflows/sync.yml@refs/heads/main'||claims.ref!=='refs/heads/main')return false;
+    const checks={algorithm:header.alg==='RS256',dates:[claims.exp,claims.nbf,claims.iat].every(Number.isFinite)&&claims.exp>now&&claims.nbf<=now+30&&claims.iat>=now-600&&claims.iat<=now+30&&claims.exp<=now+600,issuer:claims.iss==='https://token.actions.githubusercontent.com',audience:claims.aud==='collo-document-catalogue',subject:claims.sub==='repo:knsrhuseyin/cahier-de-prepa-sync:ref:refs/heads/main',repository:claims.repository==='knsrhuseyin/cahier-de-prepa-sync',workflow:claims.workflow_ref==='knsrhuseyin/cahier-de-prepa-sync/.github/workflows/sync.yml@refs/heads/main',branch:claims.ref==='refs/heads/main'};
+    for(const [reason,valid]of Object.entries(checks))if(!valid)return reject(reason);
     if(!githubKeys||keysUntil<Date.now()){
       const response=await fetch('https://token.actions.githubusercontent.com/.well-known/jwks',{signal:AbortSignal.timeout(10000)});
-      if(!response.ok)return false;githubKeys=(await response.json()).keys;keysUntil=Date.now()+300000;
+      if(!response.ok)return reject('keys_http_'+response.status);githubKeys=(await response.json()).keys;keysUntil=Date.now()+300000;
     }
-    const jwk=githubKeys.find(k=>k.kid===header.kid);if(!jwk)return false;
+    const jwk=githubKeys.find(k=>k.kid===header.kid);if(!jwk)return reject('unknown_key');
     const key=await crypto.subtle.importKey('jwk',jwk,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['verify']);
-    return await crypto.subtle.verify('RSASSA-PKCS1-v1_5',key,decode(s),enc.encode(h+'.'+p));
-  }catch{return false;}
+    return await crypto.subtle.verify('RSASSA-PKCS1-v1_5',key,decode(s),enc.encode(h+'.'+p))||reject('signature');
+  }catch{return reject('verification_or_network');}
 }
