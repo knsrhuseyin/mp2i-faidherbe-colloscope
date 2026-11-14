@@ -1,3 +1,5 @@
+import { normaliseAppearance, resolveTheme, parisDate } from "../../front/theme-core.mjs";
+import { iconPath } from "../../front/manifest-core.mjs";
 import { decode, encode, sendPush } from "./web-push.js";
 
 export const configured = (env) => Boolean(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && /^(mailto:|https:\/\/)/.test(env.VAPID_SUBJECT || ""));
@@ -39,7 +41,7 @@ export async function pushRoute(request, env, data) {
   if (path === "/api/push/test") {
     const row = await env.DB.prepare("SELECT subscription FROM push_devices WHERE id = ?").bind(id).first();
     if (!row) return { error: "Active les rappels sur cet appareil d’abord.", status: 404 };
-    const response = await sendPush(env, JSON.parse(row.subscription), { title: "Collo · Test", body: "Les notifications sont prêtes sur ce téléphone.", tag: "collo-test" });
+    const response = await sendPush(env, JSON.parse(row.subscription), { title: "Collo · Test", body: "Les notifications sont prêtes sur ce téléphone.", tag: "collo-test", icon: iconPath(resolveTheme(normaliseAppearance(data.appearance))) });
     if (!response.ok) return { error: "Le service de notification a refusé le test. Réactive les rappels.", status: 502 };
     return { ok: true };
   }
@@ -94,7 +96,7 @@ export async function dispatchReminders(env, data, now = Date.now()) {
           if (!claim.meta.changes) continue;
           try {
             const response = await sendPush(env, JSON.parse(device.subscription), {
-              title: `Collo · ${event.subject}`, tag: key,
+              title: `Collo · ${event.subject}`, tag: key, icon: iconPath(resolveTheme(normaliseAppearance(data.appearance), parisDate(new Date(now)))),
               body: `G${device.group_id} · ${event.day} à ${event.start} · ${event.examiner}${event.room ? " · Salle " + event.room : ""}`,
             });
             if (response.status === 404 || response.status === 410) {

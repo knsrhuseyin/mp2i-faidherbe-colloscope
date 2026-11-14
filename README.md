@@ -110,7 +110,7 @@ Ouvre le Worker **colloscope-api** dans Cloudflare, puis **Settings → Builds**
 | Root directory | `api` |
 | Build command | `npm run check` |
 | Deploy command | `npx wrangler deploy` |
-| Build watch include | `api/**`, `front/theme-core.mjs` |
+| Build watch include | `api/**`, `front/theme-core.mjs`, `front/manifest-core.mjs` |
 
 Le nom du Worker dans Cloudflare doit rester `colloscope-api`, comme dans `wrangler.jsonc`. La base D1 et les secrets créés plus haut restent attachés à ce Worker.
 
@@ -155,3 +155,13 @@ Dans **Admin → Apparence**, choisir une des six palettes (Minuit citron, Craie
 - Le JSON exporté comprend l’apparence. Importer un ancien planning sans champ `appearance` conserve les réglages existants.
 
 Les réglages sont conservés dans le JSON du colloscope existant en D1 ; aucune migration ni nouveau secret n’est requis. `front/theme-core.mjs` est partagé entre le front et le Worker. Inclure ce fichier dans les chemins surveillés par le build du Worker, en plus de `api/**`, lors de futures modifications du catalogue.
+
+## Icônes HX1 et référence 67
+
+Chaque palette a une icône distincte HX1 avec un petit 67, et Noël/Halloween ont leurs illustrations dédiées. L’onglet, le logo dans l’application et l’aperçu administrateur suivent immédiatement le thème actif, y compris ses périodes. Les thèmes personnalisés reprennent leurs couleurs et leur décoration.
+
+Le manifeste d’installation est servi par la Pages Function `functions/manifest.webmanifest.js` : il relit l’apparence publiée et résout le thème à la date courante en heure de Paris. Son identifiant d’application reste le même pour éviter les doublons à l’installation. Les huit modèles utilisent des PNG 192/512 px dans `icons/themes/` ; `functions/icons/custom.png.js` génère les PNG des palettes personnalisées sans dépendance externe. Ces deux routes sont définies dans `_routes.json`. En cas d’indisponibilité de l’API, le manifeste utilise Minuit citron. Le fichier statique `manifest.webmanifest` fournit aussi ce modèle par défaut.
+
+L’écran d’accueil reste géré par iOS/Android : son icône ne peut pas être remplacée de force par une page web. Android peut la mettre à jour ultérieurement ; sur iPhone, une réinstallation depuis Safari peut être nécessaire. Après réinstallation, vérifier les permissions et les rappels. Les nouvelles notifications utilisent l’icône du thème actif à l’heure de leur envoi ; les notifications déjà reçues ne changent pas.
+
+Les sources vectorielles sont dans `icon-art.mjs` et `icons/themes/*.svg`, avec les PNG pré-rendus correspondants. Après modification du dessin des modèles, régénérer leurs PNG et incrémenter `ICON_VERSION` dans `manifest-core.mjs` ainsi que la version du cache dans `sw.js`.

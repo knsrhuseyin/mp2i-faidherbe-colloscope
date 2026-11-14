@@ -38,7 +38,7 @@
   $("#installApp").onclick = async () => {
     if (installPrompt) { await installPrompt.prompt(); installPrompt = null; $("#installApp").hidden = true; }
   };
-  $("#installHelp").textContent = standalone ? "Collo est installé sur cet appareil." : ios
+  $("#installHelp").textContent = standalone ? "Collo est installé sur cet appareil. L’icône de l’onglet suit le thème. Sur l’écran d’accueil, sa mise à jour dépend du téléphone ; sur iPhone, il peut être nécessaire de réinstaller l’icône pour la changer. Après réinstallation, vérifie tes rappels." : ios
     ? "Sur iPhone (iOS 16.4+), ouvre Collo dans Safari, puis Partager → Sur l’écran d’accueil. Ouvre ensuite l’icône Collo pour activer les rappels."
     : "Installe Collo avec le bouton ci-dessous ou le menu du navigateur → Installer l’application / Ajouter à l’écran d’accueil.";
   $("#notificationsOpen").onclick = async () => {

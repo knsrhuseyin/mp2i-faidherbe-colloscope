@@ -1,4 +1,6 @@
 import { THEMES, COLOR_FIELDS, DEFAULT_APPEARANCE, catalogue, normaliseAppearance, resolveTheme, parisDate } from "./theme-core.mjs";
+import { themeIconSvg } from "./icon-art.mjs";
+import { iconPath, ICON_VERSION } from "./manifest-core.mjs";
 export { normaliseAppearance };
 const $ = s => document.querySelector(s);
 const copy = v => JSON.parse(JSON.stringify(v));
@@ -6,6 +8,21 @@ const escape = v => String(v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&l
 const CACHE = "collo-appearance-v1";
 let current = copy(DEFAULT_APPEARANCE);
 let draft, editing = null;
+let iconKey = "";
+function updateIcons(theme) {
+  const key = JSON.stringify(theme);
+  if (key === iconKey) return;
+  iconKey = key;
+  const svg = themeIconSvg(theme);
+  const favicon = document.querySelector('link[rel="icon"]');
+  if (favicon) favicon.href = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  const apple = document.querySelector('link[rel="apple-touch-icon"]');
+  if (apple) apple.href = new URL(iconPath(theme), document.baseURI).href;
+  const manifest = document.querySelector('link[rel="manifest"]');
+  if (manifest) manifest.href = './manifest.webmanifest?v=' + ICON_VERSION + '&theme=' + encodeURIComponent(theme.id);
+  const brand = document.querySelector('.brand-mark');
+  if (brand) brand.innerHTML = `<img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}" alt="HX1 · 67">`;
+}
 const symbols = { none: "", snow: "❄", pumpkins: "🎃", flowers: "✿", stars: "✦" };
 function dark(colors) {
   const rgb = [1, 3, 5].map(i => parseInt(colors.paper.slice(i, i + 2), 16) / 255);
@@ -20,6 +37,7 @@ function paint(element, theme) {
 function apply() {
   const theme = resolveTheme(current);
   paint(document.documentElement, theme);
+  updateIcons(theme);
   document.documentElement.dataset.decoration = theme.decoration;
   const mark = $("#seasonMark");
   if (mark) mark.textContent = symbols[theme.decoration];
@@ -48,7 +66,7 @@ function preview(override) {
     const date = $("#themePreviewDate").value || parisDate();
     const t = typeof override === "string" ? catalogue(clean).find(t => t.id === override) : resolveTheme(clean, date);
     paint(area, t);
-    area.innerHTML = `<div class="preview-top"><b>collo<span>.</span></b><span>Groupe 14</span></div><div class="theme-mini-hero"><small>PROCHAINE COLLE ${symbols[t.decoration]}</small><strong>Mathématiques</strong><span>Jeudi · 12:00 — 13:00</span></div><div class="preview-row">Rappels activés <span>✓</span></div><p>${escape(t.name)} · ${typeof override === "string" ? "Thème en cours d’édition" : escape(date)}</p>`;
+    area.innerHTML = `<div class="preview-top"><b class="preview-brand"><img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(themeIconSvg(t))}" alt="Icône HX1 · 67">collo<span>.</span></b><span>Groupe 14</span></div><div class="theme-mini-hero"><small>PROCHAINE COLLE ${symbols[t.decoration]}</small><strong>Mathématiques</strong><span>Jeudi · 12:00 — 13:00</span></div><div class="preview-row">Rappels activés <span>✓</span></div><p>${escape(t.name)} · ${typeof override === "string" ? "Thème en cours d’édition" : escape(date)}</p>`;
     $("#appearanceError").textContent = "";
   } catch (error) { $("#appearanceError").textContent = error.message; }
 }
@@ -59,7 +77,7 @@ export function renderAppearanceEditor(appearance) {
   panel.innerHTML = `
     <div class="appearance-heading"><div><h3>L’ambiance de Collo</h3><p>Un style partagé par toute la classe. Les changements sont publiés avec « Enregistrer les modifications ».</p></div><span class="draft-badge">Brouillon</span></div>
     <h4>Palette par défaut</h4><p class="help">Utilisée lorsqu’aucune période n’est active. Clique sur une palette pour la sélectionner.</p>
-    <div class="palette-grid">${catalogue(draft).map(t => `<button type="button" class="palette-choice ${draft.default_theme === t.id ? "selected" : ""}" data-palette="${escape(t.id)}" aria-pressed="${draft.default_theme === t.id}"><span class="palette-swatches" aria-hidden="true">${[t.colors.paper, t.colors.white, t.colors.lime, t.colors.ink].map(c => `<i style="background:${escape(c)}"></i>`).join("")}</span><strong>${escape(t.name)}</strong><small>${symbols[t.decoration] || "◌"} ${draft.default_theme === t.id ? "Palette par défaut" : "Choisir cette palette"}</small></button>`).join("")}</div>
+    <div class="palette-grid">${catalogue(draft).map(t => `<button type="button" class="palette-choice ${draft.default_theme === t.id ? "selected" : ""}" data-palette="${escape(t.id)}" aria-pressed="${draft.default_theme === t.id}"><img class="palette-icon" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(themeIconSvg(t))}" alt="Icône HX1 · 67"><span class="palette-swatches" aria-hidden="true">${[t.colors.paper, t.colors.white, t.colors.lime, t.colors.ink].map(c => `<i style="background:${escape(c)}"></i>`).join("")}</span><strong>${escape(t.name)}</strong><small>${symbols[t.decoration] || "◌"} ${draft.default_theme === t.id ? "Palette par défaut" : "Choisir cette palette"}</small></button>`).join("")}</div>
     <div class="theme-columns"><section><h4>Créer tes thèmes</h4><p class="help">Pars d’une palette, choisis tes couleurs et ajoute une décoration.</p><div class="theme-create"><label class="field"><span>Palette de départ</span><select id="themeSource">${options("christmas")}</select></label><button class="secondary" id="createTheme" type="button">+ Créer un thème</button></div><div id="customThemeEditor"></div></section>
     <section class="theme-preview-section"><h4>Aperçu par date</h4><label class="field"><span>Date à simuler</span><input id="themePreviewDate" type="date" value="${parisDate()}"></label><div class="theme-preview" id="appearancePreview" aria-label="Aperçu du thème"></div><p class="help">Cet aperçu ne modifie pas le thème publié.</p></section></div>
     <h4>Périodes programmées</h4><p class="help">Début et fin inclus, à minuit en heure de Paris. Les périodes actives ne peuvent pas se chevaucher. En dehors des périodes, retour automatique à la palette par défaut.</p>
