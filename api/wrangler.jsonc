@@ -3,6 +3,7 @@
   "name": "colloscope-api",
   "main": "src/index.js",
   "compatibility_date": "2026-09-26",
+  "triggers": { "crons": ["* * * * *"] },
   "observability": {
     "enabled": true
   },
@@ -18,3 +19,4 @@
     }
   ]
 }
+

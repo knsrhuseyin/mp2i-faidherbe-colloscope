@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101827">
   <meta name="description" content="Le colloscope MP2I, lisible par groupe et toujours à la bonne semaine.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Collo">
   <title>Collo — MP2I</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23101827'/%3E%3Cpath d='M18 18h28v28H18z' fill='none' stroke='%23d7ff3f' stroke-width='5'/%3E%3Cpath d='M25 31h14M25 39h9' stroke='%23d7ff3f' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
   <script>document.documentElement.dataset.theme=localStorage.getItem("collo-theme")||"dark"</script>
@@ -14,6 +18,7 @@
   <header class="topbar">
     <div class="brand"><span class="brand-mark">C</span> Collo <small>MP2I · S1</small></div>
     <div class="top-actions">
+      <button class="ghost" id="notificationsOpen" type="button" aria-label="Installation et rappels"><span aria-hidden="true">🔔</span><span class="long"> Rappels</span></button>
       <button class="ghost admin-open" id="adminOpen" type="button" title="Administration"><span aria-hidden="true">⚙</span><span class="long"> Admin</span></button>
       <button class="theme-toggle" id="themeToggle" type="button" aria-label="Passer au mode clair" title="Changer de thème">☀️</button>
       <label class="group-select"><span>Mon groupe</span><select id="groupSelect" aria-label="Choisir mon groupe"></select></label>
@@ -138,7 +143,28 @@
     </form>
   </dialog>
 
+  <dialog id="notificationsDialog" class="reminders-dialog" aria-labelledby="remindersTitle">
+    <div class="group-welcome">
+      <button class="close-button" id="notificationsClose" type="button" aria-label="Fermer">×</button>
+      <div class="eyebrow">Collo sur ton téléphone</div>
+      <h2 id="remindersTitle">Tes rappels de colle</h2>
+      <p id="installHelp"></p>
+      <button class="secondary" id="installApp" type="button" hidden>Installer Collo</button>
+      <label class="field" for="reminderMinutes"><span>Délais avant chaque colle, en minutes</span></label>
+      <input id="reminderMinutes" type="text" value="60" aria-describedby="remindersHelp" autocomplete="off">
+      <p class="help" id="remindersHelp">Exemples : 15 pour un quart d’heure, 60 pour une heure, 1440 pour la veille. Jusqu’à 5 rappels séparés par des virgules ; 0 pour l’heure de début. Maximum : 7 jours. Horaires de Paris.</p>
+      <p id="pushStatus" role="status" aria-live="polite"></p>
+      <div class="reminder-actions">
+        <button class="primary" id="pushSave" type="button" disabled>Activer / Enregistrer</button>
+        <button class="secondary" id="pushTest" type="button" disabled>Tester</button>
+        <button class="secondary" id="pushDisable" type="button" disabled>Désactiver</button>
+      </div>
+      <p class="help">Réglages propres à ce téléphone et au groupe du planning. Une connexion Internet est nécessaire. La réception peut être retardée par le téléphone ou le réseau.</p>
+    </div>
+  </dialog>
   <script src="./config.js"></script>
   <script src="./app.js"></script>
+  <script src="./notifications.js"></script>
 </body>
 </html>
+

@@ -1,3 +1,4 @@
+import { pushRoute, dispatchReminders } from "./notifications.js";
 import DEFAULT_DATA from "./default-data.js";
 
 const JSON_HEADERS = {
@@ -217,6 +218,11 @@ async function handle(request, env) {
   }
   if (!originIsAllowed(request, env)) return json(request, env, { error: "Origine refusée" }, 403);
 
+  if (url.pathname.startsWith("/api/push/")) {
+    const result = await pushRoute(request, env, (await readCurrentData(env)).data);
+    const { status = 200, ...body } = result;
+    return json(request, env, body, status);
+  }
   if (request.method === "GET" && url.pathname === "/") return json(request, env, { name: "Colloscope API", ok: true });
   if (request.method === "GET" && url.pathname === "/health") return json(request, env, { ok: true });
   if (request.method === "GET" && url.pathname === "/api/colloscope") return json(request, env, await readCurrentData(env));
@@ -251,6 +257,9 @@ async function handle(request, env) {
 }
 
 export default {
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(readCurrentData(env).then(({ data }) => dispatchReminders(env, data, controller.scheduledTime)));
+  },
   async fetch(request, env) {
     try {
       return await handle(request, env);
@@ -264,3 +273,4 @@ export default {
 };
 
 export { normaliseData };
+
