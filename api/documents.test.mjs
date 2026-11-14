@@ -32,11 +32,12 @@ const originalFetch=globalThis.fetch;
 globalThis.fetch=async url=>{assert.equal(url,'https://token.actions.githubusercontent.com/.well-known/jwks');return new Response(JSON.stringify({keys:[jwk]}));};
 const encode=b=>Buffer.from(b).toString('base64url');
 const now=Math.floor(Date.now()/1000);
-const claims={iss:'https://token.actions.githubusercontent.com',aud:'collo-document-catalogue',sub:'repo:knsrhuseyin/cahier-de-prepa-sync:ref:refs/heads/main',repository:'knsrhuseyin/cahier-de-prepa-sync',workflow_ref:'knsrhuseyin/cahier-de-prepa-sync/.github/workflows/sync.yml@refs/heads/main',ref:'refs/heads/main',iat:now,nbf:now-5,exp:now+300};
+const claims={iss:'https://token.actions.githubusercontent.com',aud:'collo-document-catalogue',sub:'repo:knsrhuseyin/cahier-de-prepa-sync:ref:refs/heads/main',repository:'knsrhuseyin/cahier-de-prepa-sync',repository_id:'1457021872',workflow_ref:'knsrhuseyin/cahier-de-prepa-sync/.github/workflows/sync.yml@refs/heads/main',ref:'refs/heads/main',iat:now,nbf:now-5,exp:now+300};
 async function oidc(payload){const text=encode(JSON.stringify({alg:'RS256',kid:jwk.kid}))+'.'+encode(JSON.stringify(payload));return text+'.'+encode(await crypto.subtle.sign('RSASSA-PKCS1-v1_5',pair.privateKey,new TextEncoder().encode(text)));}
 const collector=await oidc(claims);
 assert.equal(await collectorSession(new Request('https://test',{headers:{authorization:'Bearer '+collector}})),true);
 assert.equal(await collectorSession(new Request('https://test',{headers:{authorization:'Bearer '+await oidc({...claims,aud:'wrong'})}})),false);
+for(const override of [{repository_id:'999'},{repository:'other/repo'},{ref:'refs/heads/other'},{workflow_ref:'other/workflow'}])assert.equal(await collectorSession(new Request('https://test',{headers:{authorization:'Bearer '+await oidc({...claims,...override})}})),false);
 assert.equal(await collectorSession(new Request('https://test',{headers:{authorization:'Bearer '+await oidc({...claims,exp:undefined})}})),false);
 assert.equal((await call('/api/documents/collector-config',token)).status,401);
 assert.equal((await call('/api/documents/collector-config',collector)).status,200);

@@ -49,7 +49,7 @@ export async function collectorSession(request){
     const [h,p,s,extra]=token.split('.');if(extra||!h||!p||!s)return reject('format');
     const header=JSON.parse(new TextDecoder().decode(decode(h))),claims=JSON.parse(new TextDecoder().decode(decode(p)));
     const now=Date.now()/1000;
-    const checks={algorithm:header.alg==='RS256',dates:[claims.exp,claims.nbf,claims.iat].every(Number.isFinite)&&claims.exp>now&&claims.nbf<=now+30&&claims.iat>=now-600&&claims.iat<=now+30&&claims.exp<=now+600,issuer:claims.iss==='https://token.actions.githubusercontent.com',audience:claims.aud==='collo-document-catalogue',subject:claims.sub==='repo:knsrhuseyin/cahier-de-prepa-sync:ref:refs/heads/main',repository:claims.repository==='knsrhuseyin/cahier-de-prepa-sync',workflow:claims.workflow_ref==='knsrhuseyin/cahier-de-prepa-sync/.github/workflows/sync.yml@refs/heads/main',branch:claims.ref==='refs/heads/main'};
+    const checks={algorithm:header.alg==='RS256',dates:[claims.exp,claims.nbf,claims.iat].every(Number.isFinite)&&claims.exp>now&&claims.nbf<=now+30&&claims.iat>=now-600&&claims.iat<=now+30&&claims.exp<=now+600,issuer:claims.iss==='https://token.actions.githubusercontent.com',audience:claims.aud==='collo-document-catalogue',repository_id:claims.repository_id==='1457021872',repository:claims.repository==='knsrhuseyin/cahier-de-prepa-sync',workflow:claims.workflow_ref==='knsrhuseyin/cahier-de-prepa-sync/.github/workflows/sync.yml@refs/heads/main',branch:claims.ref==='refs/heads/main'};
     for(const [reason,valid]of Object.entries(checks))if(!valid)return reject(reason);
     if(!githubKeys||keysUntil<Date.now()){
       const response=await fetch('https://token.actions.githubusercontent.com/.well-known/jwks',{signal:AbortSignal.timeout(10000)});
