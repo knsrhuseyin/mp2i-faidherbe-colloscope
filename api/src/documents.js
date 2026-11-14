@@ -116,7 +116,7 @@ export async function documentRoute(request,env,admin=false){
   if(path==='/api/documents/session'&&method==='GET')return {authenticated:admin||await documentSession(request,env)};
   if(['/api/documents/collector-config','/api/documents/ingest','/api/documents/collector-error'].includes(path)){
     if(!await collectorSession(request))return {status:401,error:'Collecteur non autorisé.'};
-    if(path.endsWith('collector-config')&&method==='GET')return {sources:await sources(env,true)};
+    if(path.endsWith('collector-config')&&method==='GET')return {sources:await sources(env,true),discord:await discordSettings(env)};
     if(path.endsWith('/ingest')&&method==='POST')return ingest(env,await body(request));
     if(path.endsWith('collector-error')&&method==='POST'){
       const input=await body(request);
