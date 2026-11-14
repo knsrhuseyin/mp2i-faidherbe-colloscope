@@ -8,7 +8,7 @@
     "deploy": "wrangler deploy",
     "db:create": "wrangler d1 create colloscope-db",
     "db:migrate": "wrangler d1 migrations apply colloscope-db --remote",
-    "check": "node --check src/index.js && node --check src/notifications.js && node --check src/web-push.js && node test.mjs && node push.test.mjs"
+    "check": "node --check src/index.js && node --check src/notifications.js && node --check src/web-push.js && node test.mjs && node push.test.mjs && node appearance.test.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"

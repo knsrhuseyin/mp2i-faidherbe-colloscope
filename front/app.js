@@ -1,5 +1,5 @@
+import { setAppearance, renderAppearanceEditor, normaliseAppearance } from "./appearance.js";
 const GROUP_KEY = "collo-group-v2";
-const THEME_KEY = "collo-theme";
 const ADMIN_TOKEN_KEY = "collo-admin-token";
 const API_BASE = String(window.COLLOSCOPE_CONFIG?.API_URL || "").replace(/\/+$/, "");
 const DAY_NAMES = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
@@ -102,6 +102,7 @@ function normaliseImportedData(input) {
     };
   });
   return {
+    appearance: normaliseAppearance(input.appearance),
     schema_version: 1,
     source: String(input.source || "Import JSON"), title: String(input.title || "Colloscope"),
     class: String(input.class || "MP2I"), semester: Number(input.semester) || 1,
@@ -249,11 +250,6 @@ function populateGroups() {
   if (data.groups.some((group) => String(group.id) === String(selected))) $("#groupSelect").value = selected;
 }
 
-function updateThemeButton() {
-  const dark = document.documentElement.dataset.theme !== "light";
-  $("#themeToggle").textContent = dark ? "☀️" : "🌙";
-  $("#themeToggle").setAttribute("aria-label", dark ? "Passer au mode clair" : "Passer au mode sombre");
-}
 
 function initGroupChoice() {
   const saved = Number(localStorage.getItem(GROUP_KEY));
@@ -272,6 +268,7 @@ async function loadData() {
     if (!response.ok) throw new Error("Chargement impossible");
     const payload = await response.json();
     data = normaliseImportedData(payload.data);
+    setAppearance(data.appearance);
     updatedAt = payload.updated_at;
     currentWeek = resolveCurrentWeek();
     activeWeek = currentWeek;
@@ -301,6 +298,7 @@ function showAdminApp() {
   $("#saveError").textContent = "";
   renderSlotList();
   renderWeekEditor();
+  renderAppearanceEditor(adminDraft.appearance);
 }
 
 async function openAdmin() {
@@ -396,12 +394,14 @@ async function saveAdmin() {
   button.textContent = "Enregistrement…";
   $("#saveError").textContent = "";
   try {
+    adminDraft.appearance = normaliseAppearance(adminDraft.appearance);
     const response = await apiFetch("/api/admin/colloscope", {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(adminDraft),
     });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || "Enregistrement impossible");
     data = normaliseImportedData(payload.data);
+    setAppearance(data.appearance);
     updatedAt = payload.updated_at;
     currentWeek = resolveCurrentWeek();
     activeWeek = currentWeek;
@@ -422,12 +422,6 @@ async function saveAdmin() {
   }
 }
 
-$("#themeToggle").addEventListener("click", () => {
-  const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
-  document.documentElement.dataset.theme = next;
-  localStorage.setItem(THEME_KEY, next);
-  updateThemeButton();
-});
 $("#groupSelect").addEventListener("change", () => {
   localStorage.setItem(GROUP_KEY, $("#groupSelect").value);
   activeWeek = currentWeek;
@@ -480,14 +474,18 @@ $$('[data-admin-tab]').forEach((button) => button.addEventListener("click", () =
   $$('.admin-tab').forEach((tab) => tab.classList.toggle("active", tab === button));
   $("#slotsPanel").classList.toggle("hidden", button.dataset.adminTab !== "slots");
   $("#weeksPanel").classList.toggle("hidden", button.dataset.adminTab !== "weeks");
+  $("#appearancePanel").classList.toggle("hidden", button.dataset.adminTab !== "appearance");
 }));
 $("#jsonFile").addEventListener("change", async (event) => {
   const file = event.target.files[0];
   if (!file) return;
   try {
-    adminDraft = normaliseImportedData(JSON.parse(await file.text()));
+    const imported = JSON.parse(await file.text());
+    if (imported.appearance === undefined) imported.appearance = adminDraft.appearance;
+    adminDraft = normaliseImportedData(imported);
     renderSlotList();
     renderWeekEditor();
+    renderAppearanceEditor(adminDraft.appearance);
     $("#saveError").textContent = "";
   } catch (error) { $("#saveError").textContent = error.message; }
   event.target.value = "";
@@ -526,6 +524,28 @@ function registerModelTools() {
   });
 }
 
-updateThemeButton();
 loadData().then(registerModelTools);
 
+
+// Refresh shared settings on return to the app, without resetting the planning filters.
+let appearanceRefreshAt = 0;
+async function refreshAppearance() {
+  if (!data || document.hidden || $("#adminDialog").open || Date.now() - appearanceRefreshAt < 60000) return;
+  appearanceRefreshAt = Date.now();
+  try {
+    const response = await apiFetch("/api/colloscope");
+    if (!response.ok) return;
+    const payload = await response.json();
+    data.appearance = normaliseAppearance(payload.data.appearance);
+    setAppearance(data.appearance);
+  } catch { /* Keep the last confirmed appearance when the network is unavailable. */ }
+}
+setInterval(refreshAppearance, 60000);
+document.addEventListener("visibilitychange", refreshAppearance);
+$("#mobilePlanning").onclick = () => $("#planning").scrollIntoView({ behavior: "smooth" });
+$("#mobileReminders").onclick = () => $("#notificationsOpen").click();
+$("#mobileGroup").onclick = () => {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  $("#groupSelect").focus();
+  try { $("#groupSelect").showPicker(); } catch { $("#groupSelect").click(); }
+};

@@ -94,6 +94,7 @@ assert.deepEqual(await session.json(), { authenticated: true });
 
 const changed = structuredClone(initial.data);
 changed.title = "Colloscope modifié pendant le test";
+changed.appearance = { default_theme: "sage", custom_themes: [], periods: [{ id: "noel", theme: "christmas", start: "2026-12-01", end: "2026-12-31", enabled: true }] };
 const saved = await call("/api/admin/colloscope", {
   method: "POST",
   headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
@@ -102,4 +103,20 @@ const saved = await call("/api/admin/colloscope", {
 assert.equal(saved.status, 200);
 assert.equal(JSON.parse(database.colloscope.json).title, changed.title);
 
+assert.deepEqual(JSON.parse(database.colloscope.json).appearance, changed.appearance);
+const reread = await call("/api/colloscope");
+assert.deepEqual((await reread.json()).data.appearance, changed.appearance);
+const legacy = structuredClone(changed); delete legacy.appearance;
+await call("/api/admin/colloscope", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify(legacy) });
+assert.deepEqual(JSON.parse(database.colloscope.json).appearance, changed.appearance, "Legacy imports preserve appearance");
+const invalidAppearance = structuredClone(changed); invalidAppearance.appearance.default_theme = "unknown";
+const invalidSave = await call("/api/admin/colloscope", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify(invalidAppearance) });
+assert.equal(invalidSave.status, 400);
+assert.deepEqual(JSON.parse(database.colloscope.json).appearance, changed.appearance);
+const overlapping = structuredClone(changed);
+overlapping.appearance.periods.push({ id: "collision", theme: "halloween", start: "2026-12-25", end: "2027-01-02", enabled: true });
+const overlapSave = await call("/api/admin/colloscope", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify(overlapping) });
+assert.equal(overlapSave.status, 400);
+assert.ok((await overlapSave.json()).error.includes("chevauchent"));
 console.log("Tests API réussis.");
+

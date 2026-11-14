@@ -2,7 +2,7 @@
 <html lang="fr" data-theme="dark">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#101827">
   <meta name="description" content="Le colloscope MP2I, lisible par groupe et toujours à la bonne semaine.">
   <link rel="manifest" href="./manifest.webmanifest">
@@ -11,8 +11,9 @@
   <meta name="apple-mobile-web-app-title" content="Collo">
   <title>Collo — MP2I</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23101827'/%3E%3Cpath d='M18 18h28v28H18z' fill='none' stroke='%23d7ff3f' stroke-width='5'/%3E%3Cpath d='M25 31h14M25 39h9' stroke='%23d7ff3f' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
-  <script>document.documentElement.dataset.theme=localStorage.getItem("collo-theme")||"dark"</script>
+
   <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./appearance.css">
 </head>
 <body>
   <header class="topbar">
@@ -20,24 +21,25 @@
     <div class="top-actions">
       <button class="ghost" id="notificationsOpen" type="button" aria-label="Installation et rappels"><span aria-hidden="true">🔔</span><span class="long"> Rappels</span></button>
       <button class="ghost admin-open" id="adminOpen" type="button" title="Administration"><span aria-hidden="true">⚙</span><span class="long"> Admin</span></button>
-      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Passer au mode clair" title="Changer de thème">☀️</button>
+      <span id="activeTheme" class="active-theme">Minuit citron</span>
       <label class="group-select"><span>Mon groupe</span><select id="groupSelect" aria-label="Choisir mon groupe"></select></label>
     </div>
   </header>
 
   <main>
     <div class="notice hidden" id="siteNotice" role="status"></div>
+    <div class="page-intro"><span class="eyebrow">Ton colloscope · MP2I</span><h1>Ta semaine, au clair.</h1></div>
     <section class="summary" aria-label="Résumé">
       <article class="next-card">
-        <div class="eyebrow">Prochaine colle</div>
+        <div class="eyebrow">Prochaine colle</div><span id="seasonMark" class="season-mark" aria-hidden="true"></span>
         <div class="next-main" id="nextCard"><div class="skeleton big"></div></div>
       </article>
       <div class="stats" id="stats"></div>
     </section>
 
-    <section>
+    <section id="planning">
       <div class="toolbar">
-        <div><div class="eyebrow">Mon semestre</div><h1 id="scheduleTitle">Mes colles</h1></div>
+        <div><div class="eyebrow">Mon semestre</div><h2 id="scheduleTitle">Mes colles</h2></div>
         <div class="filters" id="filters" aria-label="Filtrer par matière"></div>
       </div>
       <div class="week-strip" id="weekStrip" aria-label="Choisir une semaine"></div>
@@ -92,6 +94,7 @@
       <div class="admin-tabs" role="tablist">
         <button class="admin-tab active" data-admin-tab="slots" type="button">Créneaux</button>
         <button class="admin-tab" data-admin-tab="weeks" type="button">Semaines</button>
+        <button class="admin-tab" data-admin-tab="appearance" type="button">Apparence</button>
       </div>
 
       <div class="admin-panel" id="slotsPanel">
@@ -107,6 +110,7 @@
         <div class="week-editor" id="weekEditor"></div>
       </div>
 
+      <div class="admin-panel hidden" id="appearancePanel"></div>
       <p class="form-error save-error" id="saveError" role="alert"></p>
       <div class="admin-footer">
         <button class="secondary" data-admin-close type="button">Annuler</button>
@@ -163,7 +167,12 @@
     </div>
   </dialog>
   <script src="./config.js"></script>
-  <script src="./app.js"></script>
+  <nav class="mobile-nav" aria-label="Navigation principale">
+    <button type="button" id="mobilePlanning"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 5h2m4 0h2"/></svg>Planning</button>
+    <button type="button" id="mobileReminders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>Rappels</button>
+    <button type="button" id="mobileGroup"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>Mon groupe</button>
+  </nav>
+  <script type="module" src="./app.js"></script>
   <script src="./notifications.js"></script>
 </body>
 </html>

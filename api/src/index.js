@@ -1,4 +1,5 @@
 import { pushRoute, dispatchReminders } from "./notifications.js";
+import { normaliseAppearance } from "../../front/theme-core.mjs";
 import DEFAULT_DATA from "./default-data.js";
 
 const JSON_HEADERS = {
@@ -192,6 +193,7 @@ function normaliseData(input) {
   });
 
   return {
+    appearance: normaliseAppearance(input.appearance),
     schema_version: 1, source: String(input.source || "Mise à jour depuis l’administration").slice(0, 240),
     title: String(input.title || "Colloscope").slice(0, 160), class: String(input.class || "MP2I").slice(0, 50),
     semester: Number(input.semester) || 1, school_year: String(input.school_year || "").slice(0, 30), groups, weeks, slots,
@@ -243,7 +245,10 @@ async function handle(request, env) {
 
   if (request.method === "POST" && url.pathname === "/api/admin/colloscope") {
     if (!(await tokenIsValid(request, env))) return json(request, env, { error: "Session expirée" }, 401);
-    const data = normaliseData(await readBody(request));
+    const input = await readBody(request);
+    // Older clients and planning-only imports must preserve the shared appearance.
+    if (input && input.appearance === undefined) input.appearance = (await readCurrentData(env)).data.appearance;
+    const data = normaliseData(input);
     const updatedAt = new Date().toISOString();
     await env.DB.prepare(`
       INSERT INTO colloscope_data (id, json, updated_at)
@@ -266,7 +271,7 @@ export default {
     } catch (error) {
       console.error(error);
       const message = error instanceof Error ? error.message : "Erreur interne";
-      const clientError = /invalide|inconnu|manquant|JSON|volumineux|semaine|créneau|groupe/i.test(message);
+      const clientError = /invalide|inconnu|manquant|JSON|volumineux|semaine|créneau|groupe|période|thème|apparence|chevauch/i.test(message);
       return json(request, env, { error: clientError ? message : "Erreur interne" }, clientError ? 400 : 500);
     }
   },

@@ -1,6 +1,6 @@
 // Cache only the app shell. Never cache API calls or admin responses.
-const CACHE = "collo-shell-v1";
-const SHELL = ["./", "./index.html", "./style.css", "./app.js", "./config.js", "./notifications.js", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png"];
+const CACHE = "collo-shell-v2";
+const SHELL = ["./", "./index.html", "./style.css", "./appearance.css", "./app.js", "./appearance.js", "./theme-core.mjs", "./config.js", "./notifications.js", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png"];
 self.addEventListener("install", event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL))));
 self.addEventListener("activate", event => event.waitUntil((async () => {
   for (const name of await caches.keys()) if (name.startsWith("collo-shell-") && name !== CACHE) await caches.delete(name);

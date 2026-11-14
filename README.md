@@ -110,7 +110,7 @@ Ouvre le Worker **colloscope-api** dans Cloudflare, puis **Settings → Builds**
 | Root directory | `api` |
 | Build command | `npm run check` |
 | Deploy command | `npx wrangler deploy` |
-| Build watch include | `api/**` |
+| Build watch include | `api/**`, `front/theme-core.mjs` |
 
 Le nom du Worker dans Cloudflare doit rester `colloscope-api`, comme dans `wrangler.jsonc`. La base D1 et les secrets créés plus haut restent attachés à ce Worker.
 
@@ -142,3 +142,16 @@ npm run check
 
 Le front n’a aucune dépendance et peut être ouvert avec un simple serveur HTTP local.
 
+
+## Palettes et thèmes saisonniers
+
+Dans **Admin → Apparence**, choisir une des six palettes (Minuit citron, Craie & indigo, Prune & lavande, Bleu polaire, Sable & terracotta, Sauge & forêt) ou les thèmes Noël et Halloween.
+
+- La palette par défaut est commune à toute la classe et s’applique en dehors des périodes.
+- Créer un thème à partir d’une palette permet de modifier son nom, ses sept couleurs et sa décoration (flocon, citrouille, fleur ou étoile). Les modèles fournis restent disponibles.
+- Ajouter une période, sélectionner son thème et renseigner ses dates avec l’année. Les dates de début et de fin sont inclusives, en heure de Paris. Pour une saison qui traverse le Nouvel An, choisir l’année suivante pour la fin.
+- Les périodes actives ne peuvent pas se chevaucher. Une période peut être désactivée ou retirée. Un thème utilisé par une période ou par défaut doit être retiré de ces usages avant suppression.
+- L’aperçu par date ne publie rien. **Enregistrer les modifications** publie le choix et les périodes ; **Annuler** les abandonne. Les autres appareils récupèrent les réglages en environ une minute quand l’appli est ouverte et connectée. Une page ouverte bascule automatiquement au plus tard 30 secondes après minuit, puis revient à la palette par défaut après la période.
+- Le JSON exporté comprend l’apparence. Importer un ancien planning sans champ `appearance` conserve les réglages existants.
+
+Les réglages sont conservés dans le JSON du colloscope existant en D1 ; aucune migration ni nouveau secret n’est requis. `front/theme-core.mjs` est partagé entre le front et le Worker. Inclure ce fichier dans les chemins surveillés par le build du Worker, en plus de `api/**`, lors de futures modifications du catalogue.
