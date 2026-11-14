@@ -1,3 +1,4 @@
+import { dispatchDocumentAnnouncements } from "./document-discord.js";
 import { documentRoute } from "./documents.js";
 import { pushRoute, dispatchReminders } from "./notifications.js";
 import { normaliseAppearance } from "../../front/theme-core.mjs";
@@ -269,6 +270,7 @@ async function handle(request, env) {
 
 export default {
   async scheduled(controller, env, ctx) {
+    ctx.waitUntil(dispatchDocumentAnnouncements(env,controller.scheduledTime).catch(()=>console.error("Synchronisation Discord Documents indisponible.")));
     ctx.waitUntil(readCurrentData(env).then(({ data }) => dispatchReminders(env, data, controller.scheduledTime)));
   },
   async fetch(request, env) {

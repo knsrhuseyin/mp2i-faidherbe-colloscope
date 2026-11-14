@@ -5,3 +5,5 @@
 .document-login{max-height:calc(100% - 110px);overflow:auto}
 
 .document-row>span:last-child svg{width:18px;height:18px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+.document-discord-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.document-source-editor input[type=checkbox]{width:auto}
