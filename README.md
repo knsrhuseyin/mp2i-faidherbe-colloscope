@@ -12,6 +12,10 @@ Le front affiche automatiquement la semaine actuelle, la prochaine colle et le n
 
 Le mot de passe n’est jamais présent dans le front ni dans GitHub : il est enregistré comme secret du Worker. Tu peux utiliser le mot de passe initial que tu as choisi, mais change-le avant de rendre le site public.
 
+## Application mobile et rappels
+
+Le front peut être installé sur iPhone et Android. Les notifications configurables nécessitent une activation du Worker et une migration D1 : voir [NOTIFICATIONS.md](NOTIFICATIONS.md).
+
 ## 1. Mettre le projet sur GitHub
 
 Décompresse l’archive, puis place son contenu dans ton dépôt :
@@ -29,7 +33,7 @@ Les deux projets Cloudflare utiliseront ce même dépôt.
 Sur NixOS, ouvre un environnement temporaire avec Node, Git et OpenSSL :
 
 ```bash
-nix-shell -p nodejs_22 git openssl
+nix-shell -p nodejs_24 git openssl
 cd api
 npm install
 npx wrangler login
@@ -137,3 +141,4 @@ npm run check
 ```
 
 Le front n’a aucune dépendance et peut être ouvert avec un simple serveur HTTP local.
+

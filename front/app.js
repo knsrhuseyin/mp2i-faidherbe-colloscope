@@ -143,6 +143,7 @@ function sessionsFor(group) {
 
 function render() {
   if (!data || !selectedGroup()) return;
+  window.dispatchEvent(new Event("collo-group-change"));
   const all = sessionsFor(selectedGroup());
   const now = new Date();
   const upcoming = all.find((session) => session.endsAt >= now);
@@ -527,3 +528,4 @@ function registerModelTools() {
 
 updateThemeButton();
 loadData().then(registerModelTools);
+
