@@ -33,7 +33,8 @@ export async function sendPush(env, subscription, payload) {
   })))].join(".");
   const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, enc.encode(jwt));
   return fetch(subscription.endpoint, {
-    method: "POST", redirect: "error", signal: AbortSignal.timeout(10000),
+    // Workers only support follow/manual; never follow a push-service redirect.
+    method: "POST", redirect: "manual", signal: AbortSignal.timeout(10000),
     headers: { authorization: `vapid t=${jwt}.${encode(signature)}, k=${env.VAPID_PUBLIC_KEY}`, "content-encoding": "aes128gcm", "content-type": "application/octet-stream", TTL: "300", Urgency: "high" },
     body: await encrypt(subscription, payload),
   });

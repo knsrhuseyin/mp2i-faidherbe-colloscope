@@ -66,6 +66,7 @@ const originalFetch = globalThis.fetch;
 const sent = [];
 let fail = false;
 globalThis.fetch = async (url, options) => {
+  assert.equal(options.redirect, "manual", "Cloudflare Workers reject redirect:error; push redirects must not be followed");
   const jwt = options.headers.authorization.match(/t=([^,]+)/)[1];
   const [head, claims, signature] = jwt.split(".");
   assert.ok(await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, vapid.publicKey, decode(signature), te.encode(head + "." + claims)));
