@@ -171,7 +171,7 @@ async function sources(env, admin = false) {
   }));
 }
 /** Stocke les lots sous une nouvelle génération, puis la publie seulement si son nombre d’entrées est complet. */
-async function ingest(env, input) {
+export async function ingest(env, input) {
   const source = await env.DB.prepare("SELECT * FROM document_sources WHERE id=?")
     .bind(input.source)
     .first();
@@ -244,6 +244,21 @@ async function ingest(env, input) {
     if (total.total !== input.expected_count)
       return { status: 409, error: "Catalogue incomplet : publication refusée." };
     await env.DB.batch([
+      // Comparer les deux instantanés avant de remplacer le catalogue courant.
+      // Une date ou taille absente n’est pas, à elle seule, une preuve de changement.
+      // Les renommages/déplacements seuls ne déclenchent pas d’annonce.
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO document_change_announcements(source_id,revision,item_id,generation,name,path,url,created_at)
+        SELECT i.source_id,s.revision,i.id,i.generation,i.name,i.path,i.url,?
+        FROM document_items i JOIN document_sources s ON s.id=i.source_id
+        JOIN document_items old ON old.source_id=s.id AND old.generation=s.generation AND old.id=i.id
+        JOIN document_discord d ON d.source_id=s.id AND d.enabled=1
+        WHERE i.source_id=? AND i.generation=? AND s.revision=? AND s.synced_at IS NOT NULL
+        AND i.kind='file' AND old.kind='file'
+        AND ((i.size IS NOT NULL AND old.size IS NOT NULL AND i.size<>old.size)
+          OR (i.modified_at IS NOT NULL AND old.modified_at IS NOT NULL AND i.modified_at<>old.modified_at))
+        AND NOT EXISTS(SELECT 1 FROM document_announcements a WHERE a.source_id=s.id AND a.revision=s.revision AND a.item_id=i.id AND a.state IN ('pending','retry'))`,
+      ).bind(now, source.id, input.generation, input.revision),
       env.DB.prepare(
         `INSERT OR IGNORE INTO document_announcements(source_id,revision,item_id,created_at)
         SELECT i.source_id,s.revision,i.id,? FROM document_items i JOIN document_sources s ON s.id=i.source_id
@@ -408,6 +423,9 @@ export async function documentRoute(request, env, admin = false) {
         env.DB.prepare("DELETE FROM document_dates WHERE source_id=?").bind(input.id),
         env.DB.prepare("DELETE FROM document_seen WHERE source_id=?").bind(input.id),
         env.DB.prepare("DELETE FROM document_announcements WHERE source_id=?").bind(input.id),
+        env.DB.prepare("DELETE FROM document_change_announcements WHERE source_id=?").bind(
+          input.id,
+        ),
       ]);
       return { ok: true };
     }

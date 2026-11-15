@@ -62,7 +62,7 @@ Les deux fonctions de `front/functions/` tournent aussi côté serveur, mais sur
 | [`src/documents.js`](api/src/documents.js) | Routes des sources et du catalogue. Valide les URL et métadonnées ; reçoit les lots du collecteur ; rend une génération visible une fois complète ; permet la navigation et la recherche. |
 | [`src/document-auth.js`](api/src/document-auth.js) | Mot de passe de classe, limitation des essais et sessions Documents. Vérifie aussi les jetons GitHub Actions du collecteur, avec dépôt, branche, audience et workflow attendus. |
 | [`src/document-store.js`](api/src/document-store.js) | Initialise de façon répétable les tables des dates, premières détections et annonces. Prend le catalogue déjà présent comme référence silencieuse. |
-| [`src/document-discord.js`](api/src/document-discord.js) | Chiffre les webhooks anglais/physique, prépare les messages et traite leur file d’envoi. Une livraison incertaine est conservée pour vérification plutôt que réémise automatiquement. |
+| [`src/document-discord.js`](api/src/document-discord.js) | Chiffre les webhooks anglais/physique, prépare les messages de nouveauté ou de mise à jour et traite leurs files d’envoi. Une livraison incertaine est conservée pour vérification plutôt que réémise automatiquement. |
 | [`src/notifications.js`](api/src/notifications.js) | Valide et stocke les abonnements push, calcule les instants des colles en heure de Paris et sélectionne les rappels arrivés à échéance. |
 | [`src/web-push.js`](api/src/web-push.js) | Chiffre un message pour l’appareil destinataire et signe l’envoi avec VAPID. Ne décide pas quand une colle doit être annoncée. |
 | [`wrangler.jsonc`](api/wrangler.jsonc) | Déclare le nom/point d’entrée du Worker, le lien vers D1, les origines autorisées et le cron. |
@@ -80,6 +80,7 @@ Une migration crée les tables ; elle ne remplace pas le code qui les utilise.
 | [`0002_push.sql`](api/migrations/0002_push.sql) | Appareils abonnés (`push_devices`) et rappels réservés/confirmés (`push_deliveries`). |
 | [`0003_documents.sql`](api/migrations/0003_documents.sql) | Accès de classe (`document_access`), sources (`document_sources`) et générations du catalogue (`document_items`). |
 | [`0004_document_updates.sql`](api/migrations/0004_document_updates.sql) | Dates d’origine, premières détections, webhooks et file d’annonces Discord des documents. |
+| [`0005_document_changes.sql`](api/migrations/0005_document_changes.sql) | File persistante des mises à jour, avec une identité par génération pour distinguer deux changements successifs. |
 
 ## Trois exemples pour suivre le code
 
@@ -94,7 +95,7 @@ Une migration crée les tables ; elle ne remplace pas le code qui les utilise.
 
 1. Le collecteur Python envoie les métadonnées par lots à `api/src/documents.js`.
 2. Une `generation` identifie l’instantané préparé ; la `revision` vérifie que la configuration de source n’a pas changé pendant la collecte.
-3. Après validation finale, cette génération devient visible. Les nouveaux fichiers peuvent entrer dans la file Discord.
+3. Après validation finale, cette génération devient visible. Les nouveaux fichiers et les changements de taille/date des fichiers existants peuvent entrer dans leurs files Discord, après comparaison avec la génération précédente.
 4. `front/documents.js` affiche leurs liens ; `document-discord.js` envoie les annonces autorisées.
 
 ### Une colle approche
@@ -147,3 +148,5 @@ npm run check:browser
 ```
 
 `npm run format` remet les sources en forme. Les tests du Worker et du navigateur remplacent leurs services externes par des réponses simulées. `node_modules/`, `.wrangler/` et `test-results/` sont des fichiers de travail générés, pas des sources à maintenir.
+
+[`api/document-changes.test.mjs`](api/document-changes.test.mjs) vérifie les comparaisons d’instantanés anglais/physique, les reprises, la pause et les livraisons incertaines dans SQLite, sans réseau externe.

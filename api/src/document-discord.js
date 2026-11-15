@@ -1,9 +1,11 @@
 /**
- * Annonces Discord des nouveaux documents d’anglais et de physique.
+ * Annonces Discord des nouveaux documents et mises à jour d’anglais et de physique.
  * Gère le chiffrement des webhooks et la file persistante, sans les exposer au navigateur.
  */
 import { ensureDocumentUpdates } from "./document-store.js";
 const subjects = { english: "Anglais", physics: "Physique" };
+// Noms internes constants ; aucune entrée utilisateur ne choisit une table SQL.
+const announcementTables = ["document_announcements", "document_change_announcements"];
 const enc = new TextEncoder();
 const encode = (b) => btoa(String.fromCharCode(...new Uint8Array(b)));
 const decode = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -66,7 +68,14 @@ async function unseal(env, source, value) {
 export async function discordSettings(env) {
   const rows = (
     await env.DB.prepare(
-      `SELECT d.source_id,d.enabled,d.updated_at,d.last_sent_at,d.last_error,(SELECT COUNT(*) FROM document_announcements a WHERE a.source_id=d.source_id AND a.state='uncertain') AS uncertain,(SELECT COUNT(*) FROM document_announcements a WHERE a.source_id=d.source_id AND a.state IN ('pending','retry','sending')) AS pending,(SELECT COUNT(*) FROM document_announcements a WHERE a.source_id=d.source_id AND a.state='sent') AS sent FROM document_discord d`,
+      `SELECT d.source_id,d.enabled,d.updated_at,d.last_sent_at,d.last_error,
+      COALESCE(a.uncertain,0) AS uncertain,COALESCE(a.pending,0) AS pending,COALESCE(a.sent,0) AS sent
+      FROM document_discord d LEFT JOIN (
+        SELECT source_id,SUM(state='uncertain') AS uncertain,
+        SUM(state IN ('pending','retry','sending')) AS pending,SUM(state='sent') AS sent
+        FROM (SELECT source_id,state FROM document_announcements UNION ALL SELECT source_id,state FROM document_change_announcements)
+        GROUP BY source_id
+      ) a ON a.source_id=d.source_id`,
     ).all()
   ).results;
   return Object.entries(subjects).map(([id, label]) => {
@@ -97,9 +106,11 @@ export async function saveDiscord(env, input) {
   if (input.remove === true) {
     await env.DB.batch([
       env.DB.prepare("DELETE FROM document_discord WHERE source_id=?").bind(input.id),
-      env.DB.prepare(
-        "UPDATE document_announcements SET state='cancelled' WHERE source_id=? AND state IN ('pending','retry')",
-      ).bind(input.id),
+      ...announcementTables.map((table) =>
+        env.DB.prepare(
+          `UPDATE ${table} SET state='cancelled' WHERE source_id=? AND state IN ('pending','retry')`,
+        ).bind(input.id),
+      ),
     ]);
     return { ok: true };
   }
@@ -112,11 +123,11 @@ export async function saveDiscord(env, input) {
     ).bind(input.id, encrypted, input.enabled ? 1 : 0, now),
     // A newly enabled/replaced destination starts with future discoveries, not its backlog.
     ...(value || !input.enabled || !existing?.enabled
-      ? [
+      ? announcementTables.map((table) =>
           env.DB.prepare(
-            "UPDATE document_announcements SET state='cancelled' WHERE source_id=? AND state IN ('pending','retry')",
+            `UPDATE ${table} SET state='cancelled' WHERE source_id=? AND state IN ('pending','retry')`,
           ).bind(input.id),
-        ]
+        )
       : []),
   ]);
   return { ok: true };
@@ -131,7 +142,9 @@ export function announcementPayload(item) {
     allowed_mentions: { parse: [] },
     embeds: [
       {
-        title: "📚 Nouveau fichier · " + subjects[item.source_id],
+        title:
+          (item.change_kind === "modified" ? "📝 Fichier mis à jour · " : "📚 Nouveau fichier · ") +
+          subjects[item.source_id],
         color: item.source_id === "english" ? 0x9b59b6 : 0xe67e22,
         description: escaped(item.name, 1000),
         url: item.url,
@@ -213,7 +226,7 @@ export async function testDiscord(env, id) {
       {
         title: "✅ Collo · " + subjects[id],
         description:
-          "Le salon est prêt pour les nouveaux fichiers. Vérification des sources toutes les dix minutes environ.",
+          "Le salon est prêt pour les nouveaux fichiers et leurs mises à jour. Vérification des sources toutes les dix minutes environ.",
         color: 0x2ecc71,
         footer: { text: "HX1 · 67" },
       },
@@ -227,46 +240,61 @@ export async function testDiscord(env, id) {
 /** Réserve chaque annonce en SQL avant l’envoi pour éviter deux envois simultanés du même élément. */
 export async function dispatchDocumentAnnouncements(env, now = Date.now()) {
   await ensureDocumentUpdates(env);
-  // Never blindly retry an expired request whose delivery may have succeeded.
-  await env.DB.prepare(
-    "UPDATE document_announcements SET state='uncertain' WHERE state='sending' AND lease_until<?",
-  )
-    .bind(now)
-    .run();
-  const rows = (
-    await env.DB.prepare(
-      `SELECT a.*,i.name,i.path,i.url,d.webhook FROM document_announcements a
-    JOIN document_sources s ON s.id=a.source_id AND s.revision=a.revision
-    JOIN document_items i ON i.source_id=s.id AND i.generation=s.generation AND i.id=a.item_id
-    JOIN document_discord d ON d.source_id=a.source_id AND d.enabled=1
-    WHERE a.state IN ('pending','retry') AND a.next_attempt<=? ORDER BY a.created_at,a.item_id LIMIT 10`,
-    )
-      .bind(now)
-      .all()
-  ).results;
-  for (const row of rows) {
-    const claim = await env.DB.prepare(
-      "UPDATE document_announcements SET state='sending',lease_until=?,attempts=attempts+1 WHERE source_id=? AND revision=? AND item_id=? AND state IN ('pending','retry') AND next_attempt<=?",
-    )
-      .bind(now + 120000, row.source_id, row.revision, row.item_id, now)
-      .run();
-    if (!claim.meta.changes) continue;
-    const result = await send(env, row.source_id, row.webhook, announcementPayload(row));
-    const sent = result.state === "sent" ? new Date(now).toISOString() : null;
-    await env.DB.batch([
+  // Une livraison sans confirmation n’est jamais réémise automatiquement.
+  await env.DB.batch(
+    announcementTables.map((table) =>
       env.DB.prepare(
-        "UPDATE document_announcements SET state=?,sent_at=?,next_attempt=? WHERE source_id=? AND revision=? AND item_id=? AND state='sending'",
-      ).bind(
-        result.state,
-        sent,
-        now + (result.delay || 600000),
+        `UPDATE ${table} SET state='uncertain' WHERE state='sending' AND lease_until<?`,
+      ).bind(now),
+    ),
+  );
+  let remaining = 10;
+  for (const table of announcementTables) {
+    const modified = table === "document_change_announcements";
+    const versionCondition = modified ? " AND generation=?" : "";
+    const rows = (
+      await env.DB.prepare(
+        `SELECT a.*${modified ? "" : ",i.name,i.path,i.url"},d.webhook FROM ${table} a
+      JOIN document_sources s ON s.id=a.source_id AND s.revision=a.revision
+      JOIN document_items i ON i.source_id=s.id AND i.generation=s.generation AND i.id=a.item_id
+      JOIN document_discord d ON d.source_id=a.source_id AND d.enabled=1
+      WHERE a.state IN ('pending','retry') AND a.next_attempt<=? ORDER BY a.created_at,a.item_id LIMIT ?`,
+      )
+        .bind(now, remaining)
+        .all()
+    ).results;
+    for (const row of rows) {
+      const versionArgs = modified ? [row.generation] : [];
+      const claim = await env.DB.prepare(
+        `UPDATE ${table} SET state='sending',lease_until=?,attempts=attempts+1 WHERE source_id=? AND revision=? AND item_id=? AND state IN ('pending','retry') AND next_attempt<=?${versionCondition}`,
+      )
+        .bind(now + 120000, row.source_id, row.revision, row.item_id, now, ...versionArgs)
+        .run();
+      if (!claim.meta.changes) continue;
+      remaining--;
+      const result = await send(
+        env,
         row.source_id,
-        row.revision,
-        row.item_id,
-      ),
-      env.DB.prepare(
-        "UPDATE document_discord SET last_sent_at=COALESCE(?,last_sent_at),last_error=? WHERE source_id=?",
-      ).bind(sent, result.error, row.source_id),
-    ]);
+        row.webhook,
+        announcementPayload({ ...row, change_kind: modified ? "modified" : "new" }),
+      );
+      const sent = result.state === "sent" ? new Date(now).toISOString() : null;
+      await env.DB.batch([
+        env.DB.prepare(
+          `UPDATE ${table} SET state=?,sent_at=?,next_attempt=? WHERE source_id=? AND revision=? AND item_id=? AND state='sending'${versionCondition}`,
+        ).bind(
+          result.state,
+          sent,
+          now + (result.delay || 600000),
+          row.source_id,
+          row.revision,
+          row.item_id,
+          ...versionArgs,
+        ),
+        env.DB.prepare(
+          "UPDATE document_discord SET last_sent_at=COALESCE(?,last_sent_at),last_error=? WHERE source_id=?",
+        ).bind(sent, result.error, row.source_id),
+      ]);
+    }
   }
 }
