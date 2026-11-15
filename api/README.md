@@ -47,4 +47,8 @@ Un POST authentifié vers `/api/admin/colloscope` doit inclure `expected_updated
 
 Les semaines doivent être ordonnées, sans chevauchement, commencer le lundi et durer au plus sept jours. Les dates doivent exister, les identifiants de semaines/groupes être uniques et la fin d’un créneau suivre son début. Le planning ouvert récupère les modifications distantes au retour au premier plan ou au prochain rafraîchissement, en conservant les filtres.
 
-`npm run check` exécute les suites Node, dont les régressions de concurrence. Après `npm ci --ignore-scripts`, `npm run check:runtime` vérifie aussi le Worker avec D1 dans Miniflare : limitation des connexions simultanées, sauvegardes concurrentes, envoi Discord et refus des redirections. Tous les appels externes de ce test sont simulés. Les deux contrôles s’exécutent sur chaque push et pull request.
+`npm run check` exécute les suites Node, dont les régressions de concurrence et le client HTTP partagé. Après `npm ci --ignore-scripts`, `npm run check:runtime` vérifie aussi le Worker avec D1 dans Miniflare : limitation des connexions simultanées, sauvegardes concurrentes, envoi Discord et refus des redirections. Tous les appels externes de ce test sont simulés.
+
+Pour les parcours navigateur : `npx playwright install chromium`, puis `npm run check:browser`. Les quatorze parcours couvrent les écrans mobile et bureau : conservation des éléments, du focus et du défilement, passage à une colle terminée, mise à jour distante, annulation d’une recherche, import/export, sauvegarde, conflits et nouvelle tentative après erreur. Le serveur local de test écoute uniquement sur 127.0.0.1:4173 et les API sont simulées. Un Chrome déjà installé peut être utilisé via `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
+
+Les trois contrôles s’exécutent sur chaque pull request et push sur main.

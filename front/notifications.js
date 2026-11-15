@@ -1,5 +1,6 @@
+import { api } from "./api-client.mjs";
+
 (() => {
-  const api = String(window.COLLOSCOPE_CONFIG?.API_URL || "").replace(/\/+$/, "");
   const $ = s => document.querySelector(s);
   const dialog = $("#notificationsDialog");
   const status = $("#pushStatus");
@@ -15,21 +16,18 @@
   persist();
   const show = text => { status.textContent = text; };
   const buttons = [$("#pushSave"), $("#pushTest"), $("#pushDisable")];
-  async function call(path, body) {
-    const response = await fetch(api + "/api/push/" + path, { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + saved.id }, body: JSON.stringify(body || {}) });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Service momentanément indisponible.");
-    return result;
+  const call = (path, body = {}) => api("/api/push/" + path, { method: "POST", token: saved.id, json: body });
+  let ready;
+  function ensureReady() {
+    if (!ready) ready = (async () => {
+      if (!("serviceWorker" in navigator)) return;
+      registration = await navigator.serviceWorker.register("./sw.js");
+      await navigator.serviceWorker.ready;
+      config = await api("/api/push/config");
+    })().catch(error => { ready = null; throw error; });
+    return ready;
   }
-  const ready = (async () => {
-    if (!("serviceWorker" in navigator)) return;
-    registration = await navigator.serviceWorker.register("./sw.js");
-    await navigator.serviceWorker.ready;
-    const response = await fetch(api + "/api/push/config");
-    if (!response.ok) throw new Error("Impossible de joindre le serveur des rappels.");
-    config = await response.json();
-  })();
-  ready.catch(() => {});
+  ensureReady().catch(() => {});
   window.addEventListener("beforeinstallprompt", e => {
     e.preventDefault(); installPrompt = e;
     $("#installApp").hidden = false;
@@ -47,7 +45,7 @@
     buttons.forEach(b => b.disabled = true);
     show("Vérification des notifications…");
     try {
-      await ready;
+      await ensureReady();
       if (ios && !standalone) return show("Ajoute d’abord Collo à l’écran d’accueil, puis ouvre l’appli depuis son icône.");
       if (!supported) return show("Les notifications ne sont pas disponibles dans ce navigateur. Essaie Safari sur iPhone ou Chrome sur Android.");
       if (!config?.enabled) return show("Les notifications ne sont pas encore activées sur le serveur. L’activation sera disponible après configuration du serveur.");
@@ -107,7 +105,7 @@
     if (syncing || !saved.enabled || !group || group === saved.group) return;
     syncing = true;
     try {
-      await ready;
+      await ensureReady();
       const sub = await registration.pushManager.getSubscription();
       if (!sub) throw new Error("Réactive les rappels dans les réglages.");
       await subscribe(sub, group, saved.reminders);

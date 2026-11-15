@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
-import vm from 'node:vm';
 import worker, { normaliseData } from './src/index.js';
 import DEFAULT from './src/default-data.js';
 
@@ -50,31 +49,4 @@ assert.deepEqual(writes.map(r => r.status).sort(), [200, 409]);
 assert.equal((await call('/api/admin/colloscope', { ...DEFAULT, title: 'stale', expected_updated_at: null }, token)).status, 409);
 assert.notEqual(JSON.parse(sqlite.prepare('SELECT json FROM colloscope_data').get().json).title, 'stale');
 
-// Exercise the real browser refresh function with controlled DOM/network boundaries.
-const app = readFileSync(new URL('../front/app.js', import.meta.url), 'utf8');
-const refreshCode = app.slice(app.indexOf('let planningRefreshAt = 0;'), app.indexOf('setInterval(refreshPlanning,'));
-const remote = structuredClone(DEFAULT); remote.slots[0].room = 'NEW ROOM';
-let rendered = 0;
-const elements = new Map();
-const context = {
-  data: structuredClone(DEFAULT), updatedAt: 'old', activeWeek: 2, currentWeek: 1,
-  document: { hidden: false }, $: selector => { if (!elements.has(selector)) elements.set(selector, { open: false }); return elements.get(selector); },
-  normaliseImportedData: d => structuredClone(d), setAppearance: () => {}, selectedGroup: () => 14,
-  resolveCurrentWeek: () => 7, populateGroups: () => {}, initGroupChoice: () => {},
-  escapeHtml: s => s, formatDate: () => 'date', render: () => rendered++,
-  apiFetch: async () => ({ ok: true, json: async () => ({ data: remote, updated_at: '2026-11-15T12:00:00Z' }) }),
-};
-const sandbox = vm.createContext(context);
-vm.runInContext(refreshCode, sandbox);
-await vm.runInContext('refreshPlanning()', sandbox);
-assert.equal(context.data.slots[0].room, 'NEW ROOM');
-assert.equal(context.updatedAt, '2026-11-15T12:00:00Z');
-assert.equal(context.activeWeek, 2);
-assert.equal(elements.get('#groupSelect').value, '14');
-assert.equal(rendered, 1);
-// A request that completes after the admin opens must not change the draft's base.
-context.apiFetch = async () => { elements.get('#adminDialog').open = true; return { ok: true, json: async () => ({ data: DEFAULT, updated_at: 'newer' }) }; };
-await vm.runInContext('planningRefreshAt=0; refreshPlanning()', sandbox);
-assert.equal(context.updatedAt, '2026-11-15T12:00:00Z');
-assert.equal(rendered, 1);
-console.log('Regression tests passed: concurrent login limits, planning validation, conflicting saves and remote refresh.');
+console.log('Regression tests passed: concurrent login limits, planning validation and conflicting saves.');
