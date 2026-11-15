@@ -1,9 +1,9 @@
 /**
- * Annonces Discord des nouveaux documents et mises à jour d’anglais et de physique.
+ * Annonces Discord des nouveaux documents et mises à jour des trois matières.
  * Gère le chiffrement des webhooks et la file persistante, sans les exposer au navigateur.
  */
 import { ensureDocumentUpdates } from "./document-store.js";
-const subjects = { english: "Anglais", physics: "Physique" };
+const subjects = { maths: "Mathématiques", english: "Anglais", physics: "Physique" };
 // Noms internes constants ; aucune entrée utilisateur ne choisit une table SQL.
 const announcementTables = ["document_announcements", "document_change_announcements"];
 const enc = new TextEncoder();
@@ -145,7 +145,7 @@ export function announcementPayload(item) {
         title:
           (item.change_kind === "modified" ? "📝 Fichier mis à jour · " : "📚 Nouveau fichier · ") +
           subjects[item.source_id],
-        color: item.source_id === "english" ? 0x9b59b6 : 0xe67e22,
+        color: { maths: 0x3498db, english: 0x9b59b6, physics: 0xe67e22 }[item.source_id],
         description: escaped(item.name, 1000),
         url: item.url,
         fields: [

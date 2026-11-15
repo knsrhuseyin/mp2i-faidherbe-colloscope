@@ -58,7 +58,7 @@ assert.ok((await(await call('/api/documents/sources',token)).json()).sources[0].
 // Separate encrypted webhook destinations and new-file-only notifications.
 const hook='https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz_1234567890';
 assert.equal((await call('/api/admin/documents/discord',token,{id:'english',enabled:true,webhook:hook})).status,401);
-assert.equal((await call('/api/admin/documents/discord',admin,{id:'maths',enabled:true,webhook:hook})).status,400);
+assert.equal((await call('/api/admin/documents/discord',admin,{id:'unknown',enabled:true,webhook:hook})).status,400);
 assert.equal((await call('/api/admin/documents/discord',admin,{id:'english',enabled:true,webhook:'https://evil.example/api/webhooks/foo'})).status,400);
 assert.equal((await call('/api/admin/documents/discord',admin,{id:'english',enabled:true,webhook:hook})).status,200);
 assert.ok(!sqlite.prepare('SELECT webhook FROM document_discord').get().webhook.includes('discord.com'));
@@ -109,6 +109,22 @@ const nextMaths={...mathsBase,generation:'maths-next'};
 await call('/api/documents/ingest',collector,{...nextMaths,items:[{...oldMath,published_at:null},{...newerMath,published_at:null},unknownMath]});
 await call('/api/documents/ingest',collector,{...nextMaths,items:[],complete:true,expected_count:3});
 mathsItems=(await(await call('/api/documents/items?source=maths',token)).json()).items;assert.equal(mathsItems[0].id,newerMath.id);assert.ok(mathsItems[0].published_at);
+// Maths webhook configuration is admin-only, encrypted, and uses its own destination.
+const mathsHook=hook.replace('123456789012345678','876543210987654321');
+assert.deepEqual(initial.discord.map(d=>d.id),['maths','english','physics']);
+assert.equal((await call('/api/admin/documents/discord',token,{id:'maths',enabled:true,webhook:mathsHook})).status,401);
+assert.equal((await call('/api/admin/documents/discord',admin,{id:'maths',enabled:true,webhook:mathsHook})).status,200);
+const mathsEncrypted=sqlite.prepare("SELECT webhook FROM document_discord WHERE source_id='maths'").get().webhook;
+assert.ok(!mathsEncrypted.includes('discord.com'));
+const mathsSettings=(await(await call('/api/admin/documents',admin)).json()).discord.find(d=>d.id==='maths');
+assert.equal(mathsSettings.label,'Mathématiques');assert.equal(mathsSettings.configured,true);assert.equal(mathsSettings.enabled,true);
+assert.ok(!JSON.stringify(mathsSettings).includes(mathsHook));
+globalThis.fetch=async(url,options)=>{assert.equal(url,mathsHook+'?wait=true');assert.ok(JSON.parse(options.body).embeds[0].title.includes('Mathématiques'));return new Response('{}');};
+assert.equal((await call('/api/admin/documents/discord/test',admin,{id:'maths'})).status,200);
+assert.equal((await call('/api/admin/documents/discord',admin,{id:'maths',enabled:false,webhook:''})).status,200);
+assert.equal(sqlite.prepare("SELECT webhook FROM document_discord WHERE source_id='maths'").get().webhook,mathsEncrypted);
+assert.equal((await call('/api/admin/documents/discord',admin,{id:'maths',enabled:false,remove:true})).status,200);
+assert.equal(sqlite.prepare("SELECT * FROM document_discord WHERE source_id='maths'").get(),undefined);
 // Physics has its own destination and its initial snapshot is silent.
 const physicsHook=hook.replace('123456789012345678','987654321098765432');
 await call('/api/admin/documents/source',admin,{id:'physics',root_url:'https://nuage13.apps.education.fr/index.php/s/ExampleShare1234'});

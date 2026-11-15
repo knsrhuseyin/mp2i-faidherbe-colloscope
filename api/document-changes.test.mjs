@@ -77,14 +77,14 @@ async function snapshot(source, files, generation = "snapshot-" + ++sequence) {
   return base;
 }
 try {
-  for (const source of ["english", "physics"]) {
+  for (const source of ["maths", "english", "physics"]) {
     const root =
-      source === "english"
+      source !== "physics"
         ? "https://drive.google.com/drive/folders/ExampleFolder1234"
         : "https://nuage13.apps.education.fr/index.php/s/ExampleShare1234";
     sqlite
       .prepare("INSERT INTO document_sources(id,label,kind,root_url,revision) VALUES(?,?,?,?,?)")
-      .run(source, source, source === "english" ? "drive" : "webdav", root, "revision-" + source);
+      .run(source, source, source === "physics" ? "webdav" : "drive", root, "revision-" + source);
     await saveDiscord(env, { id: source, enabled: true, webhook: hook });
     const file = {
       id: "ExampleFile12345",
@@ -96,9 +96,11 @@ try {
       modified_at: "2026-11-15T10:00:00Z",
       path: "",
       url:
-        source === "english"
-          ? "https://drive.google.com/file/d/ExampleFile12345/view"
-          : root + "/download?path=%2F&files=cours.pdf",
+        source === "maths"
+          ? "https://cahier-de-prepa.fr/mp2i-faidherbe/download?id=12345"
+          : source === "english"
+            ? "https://drive.google.com/file/d/ExampleFile12345/view"
+            : root + "/download?path=%2F&files=cours.pdf",
     };
     await snapshot(source, [file]);
     assert.equal(count(source), 0, "Premier passage silencieux");
@@ -129,7 +131,14 @@ try {
     await dispatchDocumentAnnouncements(env, Date.now() + 120000);
     assert.equal(messages.length, before + 2, "Limitation Discord réessayée une fois");
     assert.match(messages.at(-1).embeds[0].title, /Fichier mis à jour/);
-    assert.match(messages.at(-1).embeds[0].title, source === "english" ? /Anglais/ : /Physique/);
+    assert.ok(
+      messages
+        .at(-1)
+        .embeds[0].title.includes(
+          { maths: "Mathématiques", english: "Anglais", physics: "Physique" }[source],
+        ),
+    );
+    if (source === "maths") assert.equal(messages.at(-1).embeds[0].url, file.url);
     assert.deepEqual(messages.at(-1).allowed_mentions, { parse: [] });
 
     // Même taille, nouvelle date ; puis même date, nouvelle taille.
@@ -254,7 +263,7 @@ try {
   await ingest(env, { ...atomicBase, items: [], complete: true, expected_count: 1 });
   assert.equal(count("english"), beforeFailure + 1);
   console.log(
-    "Document change tests passed: silent baseline, atomic rollback, updates for both subjects, deduplication, retry, pause, concurrent updates, uncertain delivery and no external network.",
+    "Document change tests passed: silent baseline, atomic rollback, updates for all three subjects, deduplication, retry, pause, concurrent updates, uncertain delivery and no external network.",
   );
 } finally {
   globalThis.fetch = originalFetch;
