@@ -81,6 +81,7 @@ Une migration crée les tables ; elle ne remplace pas le code qui les utilise.
 | [`0003_documents.sql`](api/migrations/0003_documents.sql) | Accès de classe (`document_access`), sources (`document_sources`) et générations du catalogue (`document_items`). |
 | [`0004_document_updates.sql`](api/migrations/0004_document_updates.sql) | Dates d’origine, premières détections, webhooks et file d’annonces Discord des documents. |
 | [`0005_document_changes.sql`](api/migrations/0005_document_changes.sql) | File persistante des mises à jour, avec une identité par génération pour distinguer deux changements successifs. |
+| [`0006_discord_options.sql`](api/migrations/0006_discord_options.sql) | Options Discord par matière : nouveautés, mises à jour, catalogue initial et rôle à mentionner. |
 
 ## Trois exemples pour suivre le code
 

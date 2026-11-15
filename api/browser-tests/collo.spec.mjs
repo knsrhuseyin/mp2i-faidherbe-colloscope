@@ -181,17 +181,24 @@ test('admin configures, tests and pauses the maths webhook independently', async
   await expect(maths.locator('[data-discord-test]')).toBeDisabled();
   const webhook = 'https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz_1234567890';
   await maths.locator('[name="webhook"]').fill(webhook);
+  await maths.locator('[name="notify_existing"]').check();
   await maths.locator('button[type="submit"]').click();
   await expect(maths.locator('[role="status"]')).toContainText('Webhook enregistré');
-  expect(calls.at(-1)).toEqual({ path: '/api/admin/documents/discord', body: { id: 'maths', webhook, enabled: true } });
+  expect(calls.at(-1)).toEqual({ path: '/api/admin/documents/discord', body: { id: 'maths', webhook, enabled: true, notify_new: true, notify_updates: true, notify_existing: true, role_id: '' } });
   await expect(maths.locator('[name="webhook"]')).toHaveValue('');
+  await expect(maths.locator('[name="notify_existing"]')).toBeDisabled();
   await maths.locator('[data-discord-test]').click();
   await expect(maths.locator('[role="status"]')).toContainText('Message de test envoyé');
   expect(calls.at(-1)).toEqual({ path: '/api/admin/documents/discord/test', body: { id: 'maths' } });
+  await maths.locator('[data-discord-test-latest]').click();
+  await expect(maths.locator('[role="status"]')).toContainText('dernier fichier envoyé');
+  expect(calls.at(-1)).toEqual({ path: '/api/admin/documents/discord/test', body: { id: 'maths', latest: true } });
+  await maths.locator('[name="notify_updates"]').uncheck();
+  await maths.locator('[name="role_id"]').fill('123456789012345678');
   await maths.locator('[name="enabled"]').uncheck();
   await maths.locator('button[type="submit"]').click();
   await expect(maths.locator('[role="status"]')).toContainText('Webhook enregistré');
-  expect(calls.at(-1)).toEqual({ path: '/api/admin/documents/discord', body: { id: 'maths', webhook: '', enabled: false } });
+  expect(calls.at(-1)).toEqual({ path: '/api/admin/documents/discord', body: { id: 'maths', webhook: '', enabled: false, notify_new: true, notify_updates: false, notify_existing: true, role_id: '123456789012345678' } });
   expect(errors).toEqual([]);
 });
 

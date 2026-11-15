@@ -7,6 +7,8 @@ const webhook =
   "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz_1234567890";
 let outbound = 0,
   status = 200;
+let expectedRole = "",
+  lastPayload;
 const mf = new Miniflare(
   convertV4MiniflareOptions({
     modules: [
@@ -28,7 +30,11 @@ const mf = new Miniflare(
     outboundService: async (request) => {
       assert.equal(request.url, webhook + "?wait=true");
       assert.equal(request.method, "POST");
-      assert.deepEqual((await request.json()).allowed_mentions, { parse: [] });
+      lastPayload = await request.json();
+      assert.deepEqual(lastPayload.allowed_mentions, {
+        parse: [],
+        ...(expectedRole ? { roles: [expectedRole] } : {}),
+      });
       outbound++;
       return new Response("{}", {
         status,
@@ -133,6 +139,38 @@ try {
     "sent",
   );
   assert.equal(outbound, 3);
+  expectedRole = "123456789012345678";
+  const roleConfigured = await call(
+    "/api/admin/documents/discord",
+    {
+      id: "english",
+      enabled: true,
+      notify_new: false,
+      notify_updates: true,
+      role_id: expectedRole,
+    },
+    token,
+  );
+  assert.equal(roleConfigured.status, 200);
+  const latest = await call(
+    "/api/admin/documents/discord/test",
+    { id: "english", latest: true },
+    token,
+  );
+  assert.equal(latest.status, 200, await latest.text());
+  assert.equal(lastPayload.content, `<@&${expectedRole}>`);
+  assert.match(lastPayload.embeds[0].title, /Test · Dernier fichier/);
+  assert.equal(lastPayload.embeds[0].url, "https://drive.google.com/file/d/RuntimeFile12345/view");
+  assert.equal(outbound, 4);
+  const adminSettings = await (
+    await mf.dispatchFetch("https://local.test/api/admin/documents", {
+      headers: { authorization: "Bearer " + token },
+    })
+  ).json();
+  const englishOptions = adminSettings.discord.find((row) => row.id === "english");
+  assert.equal(englishOptions.notify_new, false);
+  assert.equal(englishOptions.notify_updates, true);
+  assert.equal(englishOptions.role_id, expectedRole);
   console.log(
     "Workers runtime tests passed: concurrent login limits, conflicting saves, Discord delivery and redirect rejection, with no external network access.",
   );

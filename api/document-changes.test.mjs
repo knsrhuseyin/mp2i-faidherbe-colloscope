@@ -7,6 +7,7 @@ import {
   saveDiscord,
   discordSettings,
   dispatchDocumentAnnouncements,
+  testDiscord,
 } from "./src/document-discord.js";
 
 // Vraie base SQLite : teste la comparaison et la publication atomiques, sans réseau.
@@ -52,6 +53,9 @@ await ensureDocumentUpdates(env);
 // La migration explicite et le bootstrap automatique doivent être compatibles.
 sqlite.exec(
   readFileSync(new URL("./migrations/0005_document_changes.sql", import.meta.url), "utf8"),
+);
+sqlite.exec(
+  readFileSync(new URL("./migrations/0006_discord_options.sql", import.meta.url), "utf8"),
 );
 const hook =
   "https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz_1234567890";
@@ -262,8 +266,117 @@ try {
   sqlite.exec("DROP TRIGGER reject_publication");
   await ingest(env, { ...atomicBase, items: [], complete: true, expected_count: 1 });
   assert.equal(count("english"), beforeFailure + 1);
+  // Les options de l'admin filtrent la création ET la livraison sans rattrapage.
+  await saveDiscord(env, { id: "english", enabled: false });
+  const role = "123456789012345678";
+  const optionsFile = { ...concurrentFile, id: "OptionsFile12345", size: 10 };
+  await saveDiscord(env, {
+    id: "maths",
+    enabled: true,
+    webhook: hook,
+    notify_new: false,
+    notify_updates: true,
+    role_id: role,
+  });
+  const beforeOptions = messages.length;
+  await snapshot("maths", [optionsFile]);
+  await dispatchDocumentAnnouncements(env);
+  assert.equal(messages.length, beforeOptions, "Nouveautés désactivées");
+  await snapshot("maths", [{ ...optionsFile, size: 20 }]);
+  await dispatchDocumentAnnouncements(env);
+  assert.equal(messages.length, beforeOptions + 1);
+  assert.match(messages.at(-1).embeds[0].title, /Fichier mis à jour/);
+  assert.equal(messages.at(-1).content, `<@&${role}>`);
+  assert.deepEqual(messages.at(-1).allowed_mentions, { parse: [], roles: [role] });
+  await saveDiscord(env, {
+    id: "maths",
+    enabled: true,
+    notify_new: true,
+    notify_updates: false,
+    role_id: "",
+  });
+  const extra = { ...optionsFile, id: "OptionsExtra1234" };
+  await snapshot("maths", [{ ...optionsFile, size: 30 }, extra]);
+  await dispatchDocumentAnnouncements(env);
+  assert.equal(messages.length, beforeOptions + 2);
+  assert.match(messages.at(-1).embeds[0].title, /Nouveau fichier/);
+  assert.deepEqual(messages.at(-1).allowed_mentions, { parse: [] });
+  await saveDiscord(env, { id: "maths", enabled: true, notify_updates: true });
+  await snapshot("maths", [{ ...optionsFile, size: 30 }, extra]);
+  await dispatchDocumentAnnouncements(env);
+  assert.equal(messages.length, beforeOptions + 2, "Pas de rattrapage des modifications ignorées");
+  await snapshot("maths", [{ ...optionsFile, size: 40 }, extra]);
+  await saveDiscord(env, { id: "maths", enabled: true, notify_updates: false });
+  await saveDiscord(env, { id: "maths", enabled: true, notify_updates: true });
+  await dispatchDocumentAnnouncements(env);
+  assert.equal(
+    messages.length,
+    beforeOptions + 2,
+    "Les mises à jour en attente sont annulées à la pause",
+  );
+  await assert.rejects(
+    saveDiscord(env, { id: "maths", enabled: true, role_id: "@everyone" }),
+    /rôle Discord/,
+  );
+  await assert.rejects(
+    saveDiscord(env, { id: "maths", enabled: true, notify_new: "false" }),
+    /Options Discord/,
+  );
+  await saveDiscord(env, { id: "maths", enabled: false, remove: true });
+  // Historique choisi explicitement, y compris quand aucun catalogue n'existe encore.
+  sqlite
+    .prepare("UPDATE document_sources SET generation='',synced_at=NULL WHERE id='physics'")
+    .run();
+  await saveDiscord(env, {
+    id: "physics",
+    enabled: true,
+    webhook: hook,
+    notify_existing: true,
+    role_id: role,
+  });
+  assert.equal((await testDiscord(env, "physics", true)).status, 400);
+  const historyFile = {
+    ...optionsFile,
+    id: "HistoryFile12345",
+    url: "https://nuage13.apps.education.fr/index.php/s/ExampleShare1234/download?path=%2F&files=history.pdf",
+  };
+  const beforeHistory = messages.length;
+  await snapshot("physics", [historyFile]);
+  await dispatchDocumentAnnouncements(env);
+  assert.equal(
+    messages.length,
+    beforeHistory + 1,
+    "Premier catalogue annoncé uniquement sur demande",
+  );
+  const sentBeforeTest = (await discordSettings(env)).find((row) => row.id === "physics").sent;
+  assert.deepEqual(await testDiscord(env, "physics", true), { ok: true });
+  assert.match(messages.at(-1).embeds[0].title, /Test · Dernier fichier/);
+  assert.equal(messages.at(-1).embeds[0].url, historyFile.url);
+  assert.deepEqual(messages.at(-1).allowed_mentions, { parse: [], roles: [role] });
+  assert.equal(
+    (await discordSettings(env)).find((row) => row.id === "physics").sent,
+    sentBeforeTest,
+    "Le test ne modifie pas les files",
+  );
+  await saveDiscord(env, { id: "physics", enabled: true, notify_existing: true });
+  await snapshot("physics", [historyFile]);
+  await dispatchDocumentAnnouncements(env);
+  assert.equal(
+    messages.length,
+    beforeHistory + 2,
+    "Ni réenregistrement ni nouvelle collecte ne rejouent l'historique",
+  );
+  await saveDiscord(env, { id: "physics", enabled: false, remove: true });
+  await saveDiscord(env, { id: "maths", enabled: true, webhook: hook, notify_existing: true });
+  const beforeExisting = messages.length;
+  await dispatchDocumentAnnouncements(env);
+  assert.equal(
+    messages.length,
+    beforeExisting + 1,
+    "Catalogue déjà publié inclus sur demande à la configuration",
+  );
   console.log(
-    "Document change tests passed: silent baseline, atomic rollback, updates for all three subjects, deduplication, retry, pause, concurrent updates, uncertain delivery and no external network.",
+    "Document change tests passed: all subjects, admin options, role mentions, initial history, latest-file tests, atomic rollback, deduplication, retry, pause, concurrent updates and uncertain delivery without external network.",
   );
 } finally {
   globalThis.fetch = originalFetch;

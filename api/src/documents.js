@@ -253,7 +253,9 @@ export async function ingest(env, input) {
         FROM document_items i JOIN document_sources s ON s.id=i.source_id
         JOIN document_items old ON old.source_id=s.id AND old.generation=s.generation AND old.id=i.id
         JOIN document_discord d ON d.source_id=s.id AND d.enabled=1
+        LEFT JOIN document_discord_options o ON o.source_id=s.id
         WHERE i.source_id=? AND i.generation=? AND s.revision=? AND s.synced_at IS NOT NULL
+        AND COALESCE(o.notify_updates,1)=1
         AND i.kind='file' AND old.kind='file'
         AND ((i.size IS NOT NULL AND old.size IS NOT NULL AND i.size<>old.size)
           OR (i.modified_at IS NOT NULL AND old.modified_at IS NOT NULL AND i.modified_at<>old.modified_at))
@@ -263,7 +265,10 @@ export async function ingest(env, input) {
         `INSERT OR IGNORE INTO document_announcements(source_id,revision,item_id,created_at)
         SELECT i.source_id,s.revision,i.id,? FROM document_items i JOIN document_sources s ON s.id=i.source_id
         JOIN document_discord d ON d.source_id=s.id AND d.enabled=1
-        WHERE i.source_id=? AND i.generation=? AND s.revision=? AND s.synced_at IS NOT NULL AND i.kind='file'
+        LEFT JOIN document_discord_options o ON o.source_id=s.id
+        WHERE i.source_id=? AND i.generation=? AND s.revision=?
+        AND (s.synced_at IS NOT NULL OR COALESCE(o.notify_existing,0)=1) AND i.kind='file'
+        AND COALESCE(o.notify_new,1)=1
         AND NOT EXISTS(SELECT 1 FROM document_seen v WHERE v.source_id=s.id AND v.revision=s.revision AND v.item_id=i.id)`,
       ).bind(now, source.id, input.generation, input.revision),
       env.DB.prepare(
@@ -397,8 +402,10 @@ export async function documentRoute(request, env, admin = false) {
     }
     if (path === "/api/admin/documents/discord" && method === "POST")
       return saveDiscord(env, await body(request));
-    if (path === "/api/admin/documents/discord/test" && method === "POST")
-      return testDiscord(env, (await body(request)).id);
+    if (path === "/api/admin/documents/discord/test" && method === "POST") {
+      const input = await body(request);
+      return testDiscord(env, input.id, input.latest ?? false);
+    }
     if (path === "/api/admin/documents/password" && method === "POST")
       return changeDocumentPassword(env, (await body(request)).password);
     if (path === "/api/admin/documents/source" && method === "POST") {
