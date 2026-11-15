@@ -1,3 +1,6 @@
+/**
+ * Configuration des tests Chromium : vues mobile/bureau et serveur local de test.
+ */
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({

@@ -1,5 +1,7 @@
 # Front — Cloudflare Pages
 
+Voir aussi le [guide complet des fichiers et des parcours de données](../README.code.md).
+
 Site statique en HTML, CSS et JavaScript, sans étape de compilation.
 
 Avant le premier déploiement, ouvre `config.js` et remplace `CHANGE-ME` par l’URL publique du Worker, sans `/` final.

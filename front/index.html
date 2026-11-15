@@ -1,189 +1,373 @@
 <!doctype html>
 <html lang="fr" data-theme="dark">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#101827">
-  <meta name="description" content="Le colloscope MP2I, lisible par groupe et toujours à la bonne semaine.">
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="apple-touch-icon" href="./icons/themes/midnight-192.png?v=hx1-67-v1">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Collo">
-  <title>Collo — MP2I</title>
-  <link rel="icon" type="image/svg+xml" href="./icons/favicons/midnight.svg?v=hx1-tabs-v2">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#101827" />
+    <meta
+      name="description"
+      content="Le colloscope MP2I, lisible par groupe et toujours à la bonne semaine."
+    />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/themes/midnight-192.png?v=hx1-67-v1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Collo" />
+    <title>Collo — MP2I</title>
+    <link rel="icon" type="image/svg+xml" href="./icons/favicons/midnight.svg?v=hx1-tabs-v2" />
 
-  <link rel="stylesheet" href="./style.css">
-  <link rel="stylesheet" href="./appearance.css">
-  <link rel="stylesheet" href="./documents.css">
-</head>
-<body>
-  <div class="season-scene" aria-hidden="true"></div>
-  <header class="topbar">
-    <div class="brand"><span class="brand-mark"><img src="./icons/themes/midnight.svg?v=hx1-67-v1" alt="HX1 · 67"></span> Collo <small>MP2I · S1</small></div>
-    <div class="top-actions">
-      <button class="ghost" id="documentsOpen" type="button">Documents</button>
-      <button class="ghost" id="notificationsOpen" type="button" aria-label="Installation et rappels"><span aria-hidden="true">🔔</span><span class="long"> Rappels</span></button>
-      <button class="ghost admin-open" id="adminOpen" type="button" title="Administration"><span aria-hidden="true">⚙</span><span class="long"> Admin</span></button>
-      <label class="group-select"><span>Mon groupe</span><select id="groupSelect" aria-label="Choisir mon groupe"></select></label>
-    </div>
-  </header>
-
-  <main>
-    <div class="notice hidden" id="siteNotice" role="status"></div>
-    <div class="page-intro"><span class="eyebrow">Ton colloscope · MP2I</span><h1>Ta semaine, au clair.</h1></div>
-    <section class="summary" aria-label="Résumé">
-      <article class="next-card">
-        <div class="eyebrow">Prochaine colle</div><span id="seasonMark" class="season-mark" aria-hidden="true"></span>
-        <div class="next-main" id="nextCard"><div class="skeleton big"></div></div>
-      </article>
-      <div class="stats" id="stats"></div>
-    </section>
-
-    <section id="planning">
-      <div class="toolbar">
-        <div><div class="eyebrow">Mon semestre</div><h2 id="scheduleTitle">Mes colles</h2></div>
-        <div class="filters" id="filters" aria-label="Filtrer par matière"></div>
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./appearance.css" />
+    <link rel="stylesheet" href="./documents.css" />
+  </head>
+  <body>
+    <div class="season-scene" aria-hidden="true"></div>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark"
+          ><img src="./icons/themes/midnight.svg?v=hx1-67-v1" alt="HX1 · 67"
+        /></span>
+        Collo <small>MP2I · S1</small>
       </div>
-      <div class="week-strip" id="weekStrip" aria-label="Choisir une semaine"></div>
-      <div class="schedule-head"><h2 id="weekTitle">Semaine actuelle</h2><span id="resultCount"></span></div>
-      <div class="session-list" id="sessionList"><div class="empty">Chargement du colloscope…</div></div>
-      <div class="legend" id="legend"></div>
-    </section>
-
-    <footer class="update-note">
-      <span id="sourceNote"><b>Source :</b> colloscope MP2I</span>
-      <span id="updateNote">Planning public en lecture seule.</span>
-    </footer>
-  </main>
-
-  <dialog id="groupDialog" aria-labelledby="groupDialogTitle">
-    <div class="group-welcome">
-      <div class="welcome-mark">C</div>
-      <h2 id="groupDialogTitle">Quel est ton groupe ?</h2>
-      <p>Choisis-le une seule fois. Le site le gardera en mémoire et affichera automatiquement la bonne semaine.</p>
-      <div class="welcome-form">
-        <select id="welcomeGroup" aria-label="Choisir son groupe"><option value="" selected disabled>Choisir un groupe</option></select>
-        <button id="confirmGroup" class="primary" type="button">Continuer</button>
+      <div class="top-actions">
+        <button class="ghost" id="documentsOpen" type="button">Documents</button>
+        <button
+          class="ghost"
+          id="notificationsOpen"
+          type="button"
+          aria-label="Installation et rappels"
+        >
+          <span aria-hidden="true">🔔</span><span class="long"> Rappels</span>
+        </button>
+        <button class="ghost admin-open" id="adminOpen" type="button" title="Administration">
+          <span aria-hidden="true">⚙</span><span class="long"> Admin</span>
+        </button>
+        <label class="group-select"
+          ><span>Mon groupe</span
+          ><select id="groupSelect" aria-label="Choisir mon groupe"></select
+        ></label>
       </div>
-      <div class="welcome-note">Tu pourras le changer à tout moment en haut de la page.</div>
-    </div>
-  </dialog>
+    </header>
 
-  <dialog class="admin-dialog" id="adminDialog" aria-labelledby="adminTitle">
-    <section class="admin-login" id="adminLogin">
-      <button class="close-button" data-admin-close type="button" aria-label="Fermer">×</button>
-      <div class="welcome-mark">A</div>
-      <div class="eyebrow">Zone protégée</div>
-      <h2 id="adminTitle">Administration</h2>
-      <p>Connecte-toi pour importer un nouveau JSON ou modifier visuellement les créneaux.</p>
-      <form id="loginForm">
-        <label class="field"><span>Mot de passe</span><input id="adminPassword" type="password" autocomplete="current-password" required></label>
-        <p class="form-error" id="loginError" role="alert"></p>
-        <button class="primary wide" type="submit">Se connecter</button>
-      </form>
-    </section>
+    <main>
+      <div class="notice hidden" id="siteNotice" role="status"></div>
+      <div class="page-intro">
+        <span class="eyebrow">Ton colloscope · MP2I</span>
+        <h1>Ta semaine, au clair.</h1>
+      </div>
+      <section class="summary" aria-label="Résumé">
+        <article class="next-card">
+          <div class="eyebrow">Prochaine colle</div>
+          <span id="seasonMark" class="season-mark" aria-hidden="true"></span>
+          <div class="next-main" id="nextCard"><div class="skeleton big"></div></div>
+        </article>
+        <div class="stats" id="stats"></div>
+      </section>
 
-    <section class="admin-app hidden" id="adminApp">
-      <div class="admin-head">
-        <div><div class="eyebrow">Administration</div><h2>Modifier le colloscope</h2><p>Les changements ne deviennent publics qu’après « Enregistrer ».</p></div>
-        <button class="close-button inline" data-admin-close type="button" aria-label="Fermer">×</button>
-      </div>
-      <div class="admin-actions">
-        <label class="file-button">Importer un JSON<input id="jsonFile" type="file" accept="application/json,.json"></label>
-        <button class="secondary" id="exportJson" type="button">Exporter</button>
-        <button class="secondary danger-text" id="logoutAdmin" type="button">Déconnexion</button>
-      </div>
-      <div class="admin-tabs" role="tablist">
-        <button class="admin-tab active" data-admin-tab="slots" type="button">Créneaux</button>
-        <button class="admin-tab" data-admin-tab="weeks" type="button">Semaines</button>
-        <button class="admin-tab" data-admin-tab="appearance" type="button">Apparence</button>
-        <button class="admin-tab" data-admin-tab="documents" type="button">Documents</button>
-      </div>
-
-      <div class="admin-panel" id="slotsPanel">
-        <div class="panel-tools">
-          <label class="search"><span class="sr-only">Rechercher</span><input id="slotSearch" type="search" placeholder="Rechercher une matière ou un colleur…"></label>
-          <button class="primary" id="addSlot" type="button">+ Ajouter</button>
+      <section id="planning">
+        <div class="toolbar">
+          <div>
+            <div class="eyebrow">Mon semestre</div>
+            <h2 id="scheduleTitle">Mes colles</h2>
+          </div>
+          <div class="filters" id="filters" aria-label="Filtrer par matière"></div>
         </div>
-        <div class="slot-list" id="slotList"></div>
-      </div>
+        <div class="week-strip" id="weekStrip" aria-label="Choisir une semaine"></div>
+        <div class="schedule-head">
+          <h2 id="weekTitle">Semaine actuelle</h2>
+          <span id="resultCount"></span>
+        </div>
+        <div class="session-list" id="sessionList">
+          <div class="empty">Chargement du colloscope…</div>
+        </div>
+        <div class="legend" id="legend"></div>
+      </section>
 
-      <div class="admin-panel hidden" id="weeksPanel">
-        <p class="help">Les dates servent au calcul automatique de la semaine actuelle et de la prochaine colle.</p>
-        <div class="week-editor" id="weekEditor"></div>
-      </div>
+      <footer class="update-note">
+        <span id="sourceNote"><b>Source :</b> colloscope MP2I</span>
+        <span id="updateNote">Planning public en lecture seule.</span>
+      </footer>
+    </main>
 
-      <div class="admin-panel hidden" id="appearancePanel"></div>
-      <div class="admin-panel hidden" id="documentsAdminPanel"></div>
-      <p class="form-error save-error" id="saveError" role="alert"></p>
-      <div class="admin-footer">
-        <button class="secondary" data-admin-close type="button">Annuler</button>
-        <button class="primary" id="saveAdmin" type="button">Enregistrer les modifications</button>
+    <dialog id="groupDialog" aria-labelledby="groupDialogTitle">
+      <div class="group-welcome">
+        <div class="welcome-mark">C</div>
+        <h2 id="groupDialogTitle">Quel est ton groupe ?</h2>
+        <p>
+          Choisis-le une seule fois. Le site le gardera en mémoire et affichera automatiquement la
+          bonne semaine.
+        </p>
+        <div class="welcome-form">
+          <select id="welcomeGroup" aria-label="Choisir son groupe">
+            <option value="" selected disabled>Choisir un groupe</option>
+          </select>
+          <button id="confirmGroup" class="primary" type="button">Continuer</button>
+        </div>
+        <div class="welcome-note">Tu pourras le changer à tout moment en haut de la page.</div>
       </div>
-    </section>
-  </dialog>
+    </dialog>
 
-  <dialog class="slot-dialog" id="slotDialog" aria-labelledby="slotDialogTitle">
-    <form method="dialog" id="slotForm">
-      <div class="slot-modal-head">
-        <div><div class="eyebrow">Créneau</div><h2 id="slotDialogTitle">Modifier le créneau</h2></div>
-        <button class="close-button inline" value="cancel" aria-label="Fermer">×</button>
-      </div>
-      <div class="form-grid">
-        <label class="field"><span>Matière</span><input id="slotSubject" required list="subjectSuggestions"></label>
-        <datalist id="subjectSuggestions"><option value="mathematiques"><option value="physique"><option value="anglais"><option value="francais"></datalist>
-        <label class="field"><span>Colleur</span><input id="slotExaminer" required></label>
-        <label class="field"><span>Jour</span><select id="slotDay"><option value="lundi">Lundi</option><option value="mardi">Mardi</option><option value="mercredi">Mercredi</option><option value="jeudi">Jeudi</option><option value="vendredi">Vendredi</option></select></label>
-        <label class="field"><span>Salle (facultatif)</span><input id="slotRoom"></label>
-        <label class="field"><span>Début</span><input id="slotStart" type="time" required></label>
-        <label class="field"><span>Fin</span><input id="slotEnd" type="time" required></label>
-      </div>
-      <h3>Groupe affecté chaque semaine</h3>
-      <p class="help">Laisse vide s’il n’y a pas de colle sur cette ligne cette semaine.</p>
-      <div class="allocation-grid" id="allocationGrid"></div>
-      <p class="form-error" id="slotError" role="alert"></p>
-      <div class="admin-footer">
-        <button class="secondary danger-text" id="deleteSlot" type="button">Supprimer</button>
-        <span class="footer-spacer"></span>
-        <button class="secondary" value="cancel">Annuler</button>
-        <button class="primary" id="applySlot" type="button">Appliquer</button>
-      </div>
-    </form>
-  </dialog>
+    <dialog class="admin-dialog" id="adminDialog" aria-labelledby="adminTitle">
+      <section class="admin-login" id="adminLogin">
+        <button class="close-button" data-admin-close type="button" aria-label="Fermer">×</button>
+        <div class="welcome-mark">A</div>
+        <div class="eyebrow">Zone protégée</div>
+        <h2 id="adminTitle">Administration</h2>
+        <p>Connecte-toi pour importer un nouveau JSON ou modifier visuellement les créneaux.</p>
+        <form id="loginForm">
+          <label class="field"
+            ><span>Mot de passe</span
+            ><input id="adminPassword" type="password" autocomplete="current-password" required
+          /></label>
+          <p class="form-error" id="loginError" role="alert"></p>
+          <button class="primary wide" type="submit">Se connecter</button>
+        </form>
+      </section>
 
-  <dialog id="notificationsDialog" class="reminders-dialog" aria-labelledby="remindersTitle">
-    <div class="group-welcome">
-      <button class="close-button" id="notificationsClose" type="button" aria-label="Fermer">×</button>
-      <div class="eyebrow">Collo sur ton téléphone</div>
-      <h2 id="remindersTitle">Tes rappels de colle</h2>
-      <p id="installHelp"></p>
-      <button class="secondary" id="installApp" type="button" hidden>Installer Collo</button>
-      <label class="field" for="reminderMinutes"><span>Délais avant chaque colle, en minutes</span></label>
-      <input id="reminderMinutes" type="text" value="60" aria-describedby="remindersHelp" autocomplete="off">
-      <p class="help" id="remindersHelp">Exemples : 15 pour un quart d’heure, 60 pour une heure, 1440 pour la veille. Jusqu’à 5 rappels séparés par des virgules ; 0 pour l’heure de début. Maximum : 7 jours. Horaires de Paris.</p>
-      <p id="pushStatus" role="status" aria-live="polite"></p>
-      <div class="reminder-actions">
-        <button class="primary" id="pushSave" type="button" disabled>Activer / Enregistrer</button>
-        <button class="secondary" id="pushTest" type="button" disabled>Tester</button>
-        <button class="secondary" id="pushDisable" type="button" disabled>Désactiver</button>
+      <section class="admin-app hidden" id="adminApp">
+        <div class="admin-head">
+          <div>
+            <div class="eyebrow">Administration</div>
+            <h2>Modifier le colloscope</h2>
+            <p>Les changements ne deviennent publics qu’après « Enregistrer ».</p>
+          </div>
+          <button class="close-button inline" data-admin-close type="button" aria-label="Fermer">
+            ×
+          </button>
+        </div>
+        <div class="admin-actions">
+          <label class="file-button"
+            >Importer un JSON<input id="jsonFile" type="file" accept="application/json,.json"
+          /></label>
+          <button class="secondary" id="exportJson" type="button">Exporter</button>
+          <button class="secondary danger-text" id="logoutAdmin" type="button">Déconnexion</button>
+        </div>
+        <div class="admin-tabs" role="tablist">
+          <button class="admin-tab active" data-admin-tab="slots" type="button">Créneaux</button>
+          <button class="admin-tab" data-admin-tab="weeks" type="button">Semaines</button>
+          <button class="admin-tab" data-admin-tab="appearance" type="button">Apparence</button>
+          <button class="admin-tab" data-admin-tab="documents" type="button">Documents</button>
+        </div>
+
+        <div class="admin-panel" id="slotsPanel">
+          <div class="panel-tools">
+            <label class="search"
+              ><span class="sr-only">Rechercher</span
+              ><input
+                id="slotSearch"
+                type="search"
+                placeholder="Rechercher une matière ou un colleur…"
+            /></label>
+            <button class="primary" id="addSlot" type="button">+ Ajouter</button>
+          </div>
+          <div class="slot-list" id="slotList"></div>
+        </div>
+
+        <div class="admin-panel hidden" id="weeksPanel">
+          <p class="help">
+            Les dates servent au calcul automatique de la semaine actuelle et de la prochaine colle.
+          </p>
+          <div class="week-editor" id="weekEditor"></div>
+        </div>
+
+        <div class="admin-panel hidden" id="appearancePanel"></div>
+        <div class="admin-panel hidden" id="documentsAdminPanel"></div>
+        <p class="form-error save-error" id="saveError" role="alert"></p>
+        <div class="admin-footer">
+          <button class="secondary" data-admin-close type="button">Annuler</button>
+          <button class="primary" id="saveAdmin" type="button">
+            Enregistrer les modifications
+          </button>
+        </div>
+      </section>
+    </dialog>
+
+    <dialog class="slot-dialog" id="slotDialog" aria-labelledby="slotDialogTitle">
+      <form method="dialog" id="slotForm">
+        <div class="slot-modal-head">
+          <div>
+            <div class="eyebrow">Créneau</div>
+            <h2 id="slotDialogTitle">Modifier le créneau</h2>
+          </div>
+          <button class="close-button inline" value="cancel" aria-label="Fermer">×</button>
+        </div>
+        <div class="form-grid">
+          <label class="field"
+            ><span>Matière</span><input id="slotSubject" required list="subjectSuggestions"
+          /></label>
+          <datalist id="subjectSuggestions">
+            <option value="mathematiques"></option>
+            <option value="physique"></option>
+            <option value="anglais"></option>
+            <option value="francais"></option>
+          </datalist>
+          <label class="field"><span>Colleur</span><input id="slotExaminer" required /></label>
+          <label class="field"
+            ><span>Jour</span
+            ><select id="slotDay">
+              <option value="lundi">Lundi</option>
+              <option value="mardi">Mardi</option>
+              <option value="mercredi">Mercredi</option>
+              <option value="jeudi">Jeudi</option>
+              <option value="vendredi">Vendredi</option>
+            </select></label
+          >
+          <label class="field"><span>Salle (facultatif)</span><input id="slotRoom" /></label>
+          <label class="field"
+            ><span>Début</span><input id="slotStart" type="time" required
+          /></label>
+          <label class="field"><span>Fin</span><input id="slotEnd" type="time" required /></label>
+        </div>
+        <h3>Groupe affecté chaque semaine</h3>
+        <p class="help">Laisse vide s’il n’y a pas de colle sur cette ligne cette semaine.</p>
+        <div class="allocation-grid" id="allocationGrid"></div>
+        <p class="form-error" id="slotError" role="alert"></p>
+        <div class="admin-footer">
+          <button class="secondary danger-text" id="deleteSlot" type="button">Supprimer</button>
+          <span class="footer-spacer"></span>
+          <button class="secondary" value="cancel">Annuler</button>
+          <button class="primary" id="applySlot" type="button">Appliquer</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="notificationsDialog" class="reminders-dialog" aria-labelledby="remindersTitle">
+      <div class="group-welcome">
+        <button class="close-button" id="notificationsClose" type="button" aria-label="Fermer">
+          ×
+        </button>
+        <div class="eyebrow">Collo sur ton téléphone</div>
+        <h2 id="remindersTitle">Tes rappels de colle</h2>
+        <p id="installHelp"></p>
+        <button class="secondary" id="installApp" type="button" hidden>Installer Collo</button>
+        <label class="field" for="reminderMinutes"
+          ><span>Délais avant chaque colle, en minutes</span></label
+        >
+        <input
+          id="reminderMinutes"
+          type="text"
+          value="60"
+          aria-describedby="remindersHelp"
+          autocomplete="off"
+        />
+        <p class="help" id="remindersHelp">
+          Exemples : 15 pour un quart d’heure, 60 pour une heure, 1440 pour la veille. Jusqu’à 5
+          rappels séparés par des virgules ; 0 pour l’heure de début. Maximum : 7 jours. Horaires de
+          Paris.
+        </p>
+        <p id="pushStatus" role="status" aria-live="polite"></p>
+        <div class="reminder-actions">
+          <button class="primary" id="pushSave" type="button" disabled>
+            Activer / Enregistrer
+          </button>
+          <button class="secondary" id="pushTest" type="button" disabled>Tester</button>
+          <button class="secondary" id="pushDisable" type="button" disabled>Désactiver</button>
+        </div>
+        <p class="help">
+          Réglages propres à ce téléphone et au groupe du planning. Une connexion Internet est
+          nécessaire. La réception peut être retardée par le téléphone ou le réseau.
+        </p>
       </div>
-      <p class="help">Réglages propres à ce téléphone et au groupe du planning. Une connexion Internet est nécessaire. La réception peut être retardée par le téléphone ou le réseau.</p>
-    </div>
-  </dialog>
-  <dialog id="documentsDialog" class="documents-dialog" aria-labelledby="documentsTitle">
-    <header class="documents-head"><div><div class="eyebrow">HX1 · Espace de classe</div><h2 id="documentsTitle">Tous tes documents.</h2></div><button type="button" class="close-button inline" id="documentsClose" aria-label="Fermer Documents">×</button></header>
-    <section class="document-login" id="documentsLogin"><h3>Entre dans l’espace de la classe.</h3><p>Les fichiers de maths, de physique et d’anglais, réunis au même endroit. Utilise le mot de passe communiqué par l’administrateur de HX1.</p><form id="documentLoginForm"><label class="field"><span>Mot de passe de classe</span><input id="documentPassword" type="password" maxlength="200" autocomplete="current-password" required></label><p id="documentLoginError" class="form-error" role="alert"></p><button type="submit" class="primary" id="documentLoginButton">Accéder aux documents</button></form><p class="help">La session dure jusqu’à sept jours sur cet appareil. Les plateformes d’origine conservent leurs propres permissions.</p></section>
-    <section class="documents-library" id="documentsLibrary" hidden><div class="document-tools"><label class="search"><span class="sr-only">Rechercher un fichier</span><input id="documentSearch" type="search" maxlength="120" placeholder="Rechercher un fichier ou un chapitre…"></label><button class="secondary" type="button" id="documentLogout">Déconnexion</button></div><div id="documentSubjects" aria-label="Matières"></div><div class="document-source-state"><span id="documentSourceState" role="status"></span><a id="documentOriginalSource" href="#" target="_blank" rel="noopener noreferrer" hidden>Ouvrir la source ↗</a></div><nav id="documentBreadcrumbs" class="document-breadcrumbs" aria-label="Dossier courant"></nav><div id="documentsItems" class="document-list" aria-live="polite"></div><div class="document-pagination"><button id="documentPrevious" class="secondary" type="button">Précédent</button><span id="documentPageInfo"></span><button id="documentNext" class="secondary" type="button">Suivant</button></div></section>
-  </dialog>
-  <script src="./config.js"></script>
-  <nav class="mobile-nav" aria-label="Navigation principale">
-    <button type="button" id="mobilePlanning"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 5h2m4 0h2"/></svg>Planning</button>
-    <button type="button" id="mobileDocuments"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Documents</button>
-    <button type="button" id="mobileReminders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>Rappels</button>
-    <button type="button" id="mobileGroup"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>Mon groupe</button>
-  </nav>
-  <script type="module" src="./app.js"></script>
-  <script type="module" src="./notifications.js"></script>
-</body>
+    </dialog>
+    <dialog id="documentsDialog" class="documents-dialog" aria-labelledby="documentsTitle">
+      <header class="documents-head">
+        <div>
+          <div class="eyebrow">HX1 · Espace de classe</div>
+          <h2 id="documentsTitle">Tous tes documents.</h2>
+        </div>
+        <button
+          type="button"
+          class="close-button inline"
+          id="documentsClose"
+          aria-label="Fermer Documents"
+        >
+          ×
+        </button>
+      </header>
+      <section class="document-login" id="documentsLogin">
+        <h3>Entre dans l’espace de la classe.</h3>
+        <p>
+          Les fichiers de maths, de physique et d’anglais, réunis au même endroit. Utilise le mot de
+          passe communiqué par l’administrateur de HX1.
+        </p>
+        <form id="documentLoginForm">
+          <label class="field"
+            ><span>Mot de passe de classe</span
+            ><input
+              id="documentPassword"
+              type="password"
+              maxlength="200"
+              autocomplete="current-password"
+              required
+          /></label>
+          <p id="documentLoginError" class="form-error" role="alert"></p>
+          <button type="submit" class="primary" id="documentLoginButton">
+            Accéder aux documents
+          </button>
+        </form>
+        <p class="help">
+          La session dure jusqu’à sept jours sur cet appareil. Les plateformes d’origine conservent
+          leurs propres permissions.
+        </p>
+      </section>
+      <section class="documents-library" id="documentsLibrary" hidden>
+        <div class="document-tools">
+          <label class="search"
+            ><span class="sr-only">Rechercher un fichier</span
+            ><input
+              id="documentSearch"
+              type="search"
+              maxlength="120"
+              placeholder="Rechercher un fichier ou un chapitre…" /></label
+          ><button class="secondary" type="button" id="documentLogout">Déconnexion</button>
+        </div>
+        <div id="documentSubjects" aria-label="Matières"></div>
+        <div class="document-source-state">
+          <span id="documentSourceState" role="status"></span
+          ><a id="documentOriginalSource" href="#" target="_blank" rel="noopener noreferrer" hidden
+            >Ouvrir la source ↗</a
+          >
+        </div>
+        <nav
+          id="documentBreadcrumbs"
+          class="document-breadcrumbs"
+          aria-label="Dossier courant"
+        ></nav>
+        <div id="documentsItems" class="document-list" aria-live="polite"></div>
+        <div class="document-pagination">
+          <button id="documentPrevious" class="secondary" type="button">Précédent</button
+          ><span id="documentPageInfo"></span
+          ><button id="documentNext" class="secondary" type="button">Suivant</button>
+        </div>
+      </section>
+    </dialog>
+    <script src="./config.js"></script>
+    <nav class="mobile-nav" aria-label="Navigation principale">
+      <button type="button" id="mobilePlanning">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="16" rx="3" />
+          <path d="M7 3v4m10-4v4M3 11h18m-13 5h2m4 0h2" /></svg
+        >Planning
+      </button>
+      <button type="button" id="mobileDocuments">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+          /></svg
+        >Documents
+      </button>
+      <button type="button" id="mobileReminders">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg
+        >Rappels
+      </button>
+      <button type="button" id="mobileGroup">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21v-2a8 8 0 0 1 16 0v2" /></svg
+        >Mon groupe
+      </button>
+    </nav>
+    <script type="module" src="./app.js"></script>
+    <script type="module" src="./notifications.js"></script>
+  </body>
 </html>
-

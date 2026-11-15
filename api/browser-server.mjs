@@ -1,3 +1,6 @@
+/**
+ * Serveur statique local réservé aux parcours Playwright ; ne sert pas le site de production.
+ */
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';

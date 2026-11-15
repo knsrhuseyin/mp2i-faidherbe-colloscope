@@ -1,5 +1,7 @@
 # API — Cloudflare Worker + D1
 
+Voir aussi le [guide complet des fichiers et des parcours de données](../README.code.md).
+
 L’API sert le colloscope au front et protège toutes les modifications par une session administrateur signée.
 
 ## Installation
@@ -52,3 +54,7 @@ Les semaines doivent être ordonnées, sans chevauchement, commencer le lundi et
 Pour les parcours navigateur : `npx playwright install chromium`, puis `npm run check:browser`. Les quatorze parcours couvrent les écrans mobile et bureau : conservation des éléments, du focus et du défilement, passage à une colle terminée, mise à jour distante, annulation d’une recherche, import/export, sauvegarde, conflits et nouvelle tentative après erreur. Le serveur local de test écoute uniquement sur 127.0.0.1:4173 et les API sont simulées. Un Chrome déjà installé peut être utilisé via `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
 
 Les trois contrôles s’exécutent sur chaque pull request et push sur main.
+
+## Garder les sources lisibles
+
+`npm run format` remet les sources JavaScript, HTML et CSS en forme avec la configuration `.prettierrc.json` de la racine. `npm run format:check` vérifie ce format sans écrire. Les en-têtes de modules donnent leur rôle et les commentaires détaillent les contraintes importantes ; le guide de lecture explique les relations entre fichiers.

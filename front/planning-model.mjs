@@ -1,3 +1,7 @@
+/**
+ * Modèle du planning : normalisation des imports, dates et colles d’un groupe.
+ * Ce module ne lit ni le DOM, ni le réseau, ni le stockage du navigateur.
+ */
 import { normaliseAppearance } from "./theme-core.mjs";
 
 const DAY_NAMES = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
@@ -33,11 +37,20 @@ function formatDate(value, options = { day: "numeric", month: "short" }) {
 }
 
 function subjectInfo(subject) {
-  return SUBJECTS[subject] || { label: subject.charAt(0).toUpperCase() + subject.slice(1), color: "other" };
+  return (
+    SUBJECTS[subject] || {
+      label: subject.charAt(0).toUpperCase() + subject.slice(1),
+      color: "other",
+    }
+  );
 }
 
 function normaliseSubject(value) {
-  const text = String(value || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const text = String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
   if (["maths", "math", "mathematique", "mathematiques"].includes(text)) return "mathematiques";
   if (["physique", "physics"].includes(text)) return "physique";
   if (["anglais", "english"].includes(text)) return "anglais";
@@ -45,41 +58,72 @@ function normaliseSubject(value) {
   return text.replace(/[^a-z0-9_-]+/g, "-").replace(/^-|-$/g, "") || "autre";
 }
 
+/** Convertit les anciens et nouveaux JSON dans le format du front ; la validation stricte reste côté API. */
 function normaliseImportedData(input) {
-  if (!input || typeof input !== "object" || !Array.isArray(input.weeks) || !Array.isArray(input.slots)) throw new Error("Ce fichier ne ressemble pas à un colloscope JSON.");
+  if (
+    !input ||
+    typeof input !== "object" ||
+    !Array.isArray(input.weeks) ||
+    !Array.isArray(input.slots)
+  )
+    throw new Error("Ce fichier ne ressemble pas à un colloscope JSON.");
   const weeks = input.weeks.map((week, index) => ({
     id: Number(week.id ?? week.n ?? index + 1),
     label: String(week.label || `S${week.id ?? week.n ?? index + 1}`),
     start: String(week.start || ""),
     end: String(week.end || ""),
   }));
-  const groups = Array.isArray(input.groups) && input.groups.length
-    ? input.groups.map((group) => typeof group === "object" ? {
-        id: Number(group.id), label: String(group.label || `G${group.id}`), members_raw: String(group.members_raw || ""),
-      } : { id: Number(group), label: `G${group}`, members_raw: "" })
-    : Array.from({ length: 17 }, (_, index) => ({ id: index + 1, label: `G${index + 1}`, members_raw: "" }));
+  const groups =
+    Array.isArray(input.groups) && input.groups.length
+      ? input.groups.map((group) =>
+          typeof group === "object"
+            ? {
+                id: Number(group.id),
+                label: String(group.label || `G${group.id}`),
+                members_raw: String(group.members_raw || ""),
+              }
+            : { id: Number(group), label: `G${group}`, members_raw: "" },
+        )
+      : Array.from({ length: 17 }, (_, index) => ({
+          id: index + 1,
+          label: `G${index + 1}`,
+          members_raw: "",
+        }));
   const slots = input.slots.map((slot) => {
     const old = Array.isArray(slot);
     const day = old ? slot[2] : slot.day;
     return {
       subject: normaliseSubject(old ? slot[0] : slot.subject),
       examiner: String(old ? slot[1] : slot.examiner || ""),
-      day: Number.isInteger(day) ? DAY_SLUGS[day] : String(day || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
+      day: Number.isInteger(day)
+        ? DAY_SLUGS[day]
+        : String(day || "")
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, ""),
       start: String(old ? slot[3] : slot.start || ""),
       end: String(old ? slot[4] : slot.end || ""),
       room: old || !slot.room ? null : String(slot.room),
-      group_by_week: (old ? slot[5] : slot.group_by_week || []).map((group) => !group || Number(group) === 0 ? null : Number(group)),
+      group_by_week: (old ? slot[5] : slot.group_by_week || []).map((group) =>
+        !group || Number(group) === 0 ? null : Number(group),
+      ),
     };
   });
   return {
     appearance: normaliseAppearance(input.appearance),
     schema_version: 1,
-    source: String(input.source || "Import JSON"), title: String(input.title || "Colloscope"),
-    class: String(input.class || "MP2I"), semester: Number(input.semester) || 1,
-    school_year: String(input.school_year || ""), groups, weeks, slots,
+    source: String(input.source || "Import JSON"),
+    title: String(input.title || "Colloscope"),
+    class: String(input.class || "MP2I"),
+    semester: Number(input.semester) || 1,
+    school_year: String(input.school_year || ""),
+    groups,
+    weeks,
+    slots,
   };
 }
 
+/** Choisit la semaine du jour, puis la prochaine, ou la dernière lorsque le semestre est terminé. */
 function resolveCurrentWeek(data, today = localKey()) {
   const exact = data.weeks.find((week) => week.start <= today && today <= week.end);
   if (exact) return exact.id;
@@ -88,10 +132,14 @@ function resolveCurrentWeek(data, today = localKey()) {
 }
 
 const sessionCache = new WeakMap();
+/** Déplie les affectations par semaine. Le cache suppose que chaque mise à jour fournit un nouvel objet data. */
 function sessionsFor(data, group) {
   if (!data || !group) return [];
   let groups = sessionCache.get(data);
-  if (!groups) { groups = new Map(); sessionCache.set(data, groups); }
+  if (!groups) {
+    groups = new Map();
+    sessionCache.set(data, groups);
+  }
   if (groups.has(group)) return groups.get(group);
   const result = [];
   data.slots.forEach((slot, slotIndex) => {
@@ -102,9 +150,18 @@ function sessionsFor(data, group) {
       if (dayIndex < 0) return;
       const date = addDays(localDate(week.start), dayIndex);
       result.push({
-        key: `${slotIndex}:${week.id}`, subject: slot.subject, teacher: slot.examiner, room: slot.room, day: dayIndex,
-        start: slot.start, end: slot.end, week: week.id, weekLabel: week.label, date,
-        startsAt: localDate(localKey(date), slot.start), endsAt: localDate(localKey(date), slot.end),
+        key: `${slotIndex}:${week.id}`,
+        subject: slot.subject,
+        teacher: slot.examiner,
+        room: slot.room,
+        day: dayIndex,
+        start: slot.start,
+        end: slot.end,
+        week: week.id,
+        weekLabel: week.label,
+        date,
+        startsAt: localDate(localKey(date), slot.start),
+        endsAt: localDate(localKey(date), slot.end),
       });
     });
   });
@@ -113,5 +170,16 @@ function sessionsFor(data, group) {
   return result;
 }
 
-
-export { DAY_NAMES, DAY_SLUGS, localDate, localKey, addDays, formatDate, subjectInfo, normaliseSubject, normaliseImportedData, resolveCurrentWeek, sessionsFor };
+export {
+  DAY_NAMES,
+  DAY_SLUGS,
+  localDate,
+  localKey,
+  addDays,
+  formatDate,
+  subjectInfo,
+  normaliseSubject,
+  normaliseImportedData,
+  resolveCurrentWeek,
+  sessionsFor,
+};

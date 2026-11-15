@@ -18,6 +18,8 @@ jobs:
         working-directory: api
       - run: npm ci --ignore-scripts
         working-directory: api
+      - run: npm run format:check
+        working-directory: api
       - run: npm run check:runtime
         working-directory: api
       - run: npx playwright install --with-deps chromium
