@@ -405,7 +405,7 @@ async function saveAdmin() {
   try {
     adminDraft.appearance = normaliseAppearance(adminDraft.appearance);
     const response = await apiFetch("/api/admin/colloscope", {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(adminDraft),
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...adminDraft, expected_updated_at: updatedAt }),
     });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || "Enregistrement impossible");
@@ -538,21 +538,41 @@ function registerModelTools() {
 loadData().then(registerModelTools);
 
 
-// Refresh shared settings on return to the app, without resetting the planning filters.
-let appearanceRefreshAt = 0;
-async function refreshAppearance() {
-  if (!data || document.hidden || $("#adminDialog").open || Date.now() - appearanceRefreshAt < 60000) return;
-  appearanceRefreshAt = Date.now();
+// Refresh the full planning on return, retaining the selected group and filters.
+let planningRefreshAt = 0;
+let planningRefreshing = false;
+async function refreshPlanning() {
+  if (!data || document.hidden || $("#adminDialog").open || planningRefreshing || Date.now() - planningRefreshAt < 60000) return;
+  planningRefreshAt = Date.now();
+  planningRefreshing = true;
+  const version = updatedAt;
   try {
     const response = await apiFetch("/api/colloscope");
     if (!response.ok) return;
     const payload = await response.json();
-    data.appearance = normaliseAppearance(payload.data.appearance);
+    // A response started before editing/saving must not replace the draft's base.
+    if ($("#adminDialog").open || updatedAt !== version) return;
+    if (payload.updated_at !== updatedAt) {
+      const next = normaliseImportedData(payload.data);
+      const group = selectedGroup();
+      data = next;
+      updatedAt = payload.updated_at;
+      currentWeek = resolveCurrentWeek();
+      if (activeWeek !== 0 && !data.weeks.some(week => week.id === activeWeek)) activeWeek = currentWeek;
+      populateGroups();
+      if (data.groups.some(item => item.id === group)) $("#groupSelect").value = String(group);
+      else initGroupChoice();
+      $("#scheduleTitle").textContent = data.title || "Mes colles";
+      $("#sourceNote").innerHTML = `<b>Source :</b> ${escapeHtml(data.source || data.title || "colloscope MP2I")}`;
+      $("#updateNote").textContent = updatedAt ? `Mis à jour le ${formatDate(new Date(updatedAt), { dateStyle: "long", timeStyle: "short" })}` : "Planning public en lecture seule.";
+      render();
+    }
     setAppearance(data.appearance);
-  } catch { /* Keep the last confirmed appearance when the network is unavailable. */ }
+  } catch { /* Keep the last confirmed planning when the network is unavailable. */ }
+  finally { planningRefreshing = false; }
 }
-setInterval(refreshAppearance, 60000);
-document.addEventListener("visibilitychange", refreshAppearance);
+setInterval(refreshPlanning, 60000);
+document.addEventListener("visibilitychange", refreshPlanning);
 $("#mobilePlanning").onclick = () => $("#planning").scrollIntoView({ behavior: "smooth" });
 $("#mobileReminders").onclick = () => $("#notificationsOpen").click();
 $("#mobileGroup").onclick = () => {

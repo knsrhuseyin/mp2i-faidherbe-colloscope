@@ -39,8 +39,9 @@ async function send(env,source,encrypted,payload){
   let response;
   try{
     const url=webhookUrl(await unseal(env,source,encrypted))+'?wait=true';
-    response=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),redirect:'error',signal:AbortSignal.timeout(15000)});
+    response=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload),redirect:'manual',signal:AbortSignal.timeout(15000)});
     await response.body?.cancel();
+    if(response.status>=300&&response.status<400)return {state:'retry',delay:600000,error:'Redirection Discord refusée. Vérifie l’URL du webhook.'};
     if(response.status===200||response.status===204)return {state:'sent',error:null};
     if(response.status===429){const delay=Number(response.headers.get('retry-after'));return {state:'retry',delay:Number.isFinite(delay)?Math.min(3600,Math.max(60,delay))*1000:60000,error:'Discord limite les envois. Nouvelle tentative prévue.'};}
     if(response.status>=500)return {state:'uncertain',error:'Discord a renvoyé une erreur. Envoi incertain : vérifier le salon avant de réessayer.'};

@@ -40,3 +40,11 @@ Le nom du Worker dans Cloudflare doit correspondre au champ `name` de `wrangler.
 - `POST /api/admin/login`
 - `GET /api/admin/session`
 - `POST /api/admin/colloscope`
+
+## Sauvegardes et vérifications
+
+Un POST authentifié vers `/api/admin/colloscope` doit inclure `expected_updated_at`, égal au `updated_at` reçu lors du chargement (ou `null` avant la première sauvegarde). Une version périmée renvoie HTTP 409 et conserve le planning enregistré ; une version absente renvoie HTTP 428. Après une mise à jour du site, recharger les anciens onglets administrateur. L’éditeur conserve le brouillon en cas de conflit pour permettre son export JSON.
+
+Les semaines doivent être ordonnées, sans chevauchement, commencer le lundi et durer au plus sept jours. Les dates doivent exister, les identifiants de semaines/groupes être uniques et la fin d’un créneau suivre son début. Le planning ouvert récupère les modifications distantes au retour au premier plan ou au prochain rafraîchissement, en conservant les filtres.
+
+`npm run check` exécute les suites Node, dont les régressions de concurrence. Après `npm ci --ignore-scripts`, `npm run check:runtime` vérifie aussi le Worker avec D1 dans Miniflare : limitation des connexions simultanées, sauvegardes concurrentes, envoi Discord et refus des redirections. Tous les appels externes de ce test sont simulés. Les deux contrôles s’exécutent sur chaque push et pull request.

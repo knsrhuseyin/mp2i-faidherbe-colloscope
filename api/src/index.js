@@ -94,27 +94,16 @@ async function hashIp(request) {
 async function loginIsAllowed(request, env) {
   const ipHash = await hashIp(request);
   const now = Math.floor(Date.now() / 1000);
-  const row = await env.DB.prepare("SELECT window_started, attempts FROM login_attempts WHERE ip_hash = ?").bind(ipHash).first();
-  if (!row || now - Number(row.window_started) >= 900) {
-    return { allowed: true, ipHash, now, windowStarted: now, attempts: 0 };
-  }
-  return {
-    allowed: Number(row.attempts) < 5,
-    ipHash,
-    now,
-    windowStarted: Number(row.window_started),
-    attempts: Number(row.attempts),
-  };
-}
-
-async function recordFailedLogin(env, state) {
-  await env.DB.prepare(`
+  // Reserve the attempt before checking the password, including concurrent requests.
+  const row = await env.DB.prepare(`
     INSERT INTO login_attempts (ip_hash, window_started, attempts)
-    VALUES (?, ?, ?)
+    VALUES (?, ?, 1)
     ON CONFLICT(ip_hash) DO UPDATE SET
-      window_started = excluded.window_started,
-      attempts = excluded.attempts
-  `).bind(state.ipHash, state.windowStarted, state.attempts + 1).run();
+      attempts = CASE WHEN window_started <= ? THEN 1 ELSE attempts + 1 END,
+      window_started = CASE WHEN window_started <= ? THEN excluded.window_started ELSE window_started END
+    RETURNING attempts
+  `).bind(ipHash, now, now - 900, now - 900).first();
+  return { allowed: Number(row.attempts) <= 5, ipHash };
 }
 
 async function clearLoginAttempts(env, ipHash) {
@@ -145,7 +134,8 @@ function validTime(value, field) {
 
 function validDate(value, field) {
   const result = String(value || "").trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(result) || Number.isNaN(Date.parse(`${result}T12:00:00Z`))) throw new Error(`${field} invalide`);
+  const stamp = Date.parse(`${result}T12:00:00Z`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(result) || !Number.isFinite(stamp) || new Date(stamp).toISOString().slice(0, 10) !== result) throw new Error(`${field} invalide`);
   return result;
 }
 
@@ -155,24 +145,34 @@ function normaliseData(input) {
   if (!Array.isArray(input.slots) || input.slots.length > 500) throw new Error("La liste des créneaux est invalide");
 
   const weeks = input.weeks.map((week, index) => {
+    if (!week || typeof week !== "object") throw new Error("Semaine invalide");
     const id = Number(week.id ?? week.n ?? index + 1);
     if (!Number.isInteger(id) || id < 1 || id > 99) throw new Error("Numéro de semaine invalide");
     const start = validDate(week.start, "Date de début");
     const end = validDate(week.end, "Date de fin");
     if (end < start) throw new Error("Une semaine se termine avant de commencer");
+    if (new Date(`${start}T12:00:00Z`).getUTCDay() !== 1) throw new Error("Une semaine doit commencer un lundi");
+    if (Date.parse(`${end}T12:00:00Z`) - Date.parse(`${start}T12:00:00Z`) > 6 * 86400000) throw new Error("Une semaine ne peut pas dépasser sept jours");
     return { id, label: String(week.label || `S${id}`).slice(0, 30), start, end };
   });
+  if (new Set(weeks.map(week => week.id)).size !== weeks.length) throw new Error("Identifiants de semaine dupliqués");
+  for (let i = 1; i < weeks.length; i++) {
+    if (weeks[i].start <= weeks[i - 1].end) throw new Error("Semaines non ordonnées ou qui se chevauchent");
+  }
 
   const groups = Array.isArray(input.groups) && input.groups.length
     ? input.groups.map((group) => {
+        if (group === null) throw new Error("Groupe invalide");
         const id = Number(typeof group === "object" ? group.id : group);
         if (!Number.isInteger(id) || id < 1 || id > 99) throw new Error("Groupe invalide");
         return { id, label: String((typeof group === "object" && group.label) || `G${id}`).slice(0, 30), members_raw: String((typeof group === "object" && group.members_raw) || "").slice(0, 500) };
       })
     : Array.from({ length: 17 }, (_, index) => ({ id: index + 1, label: `G${index + 1}`, members_raw: "" }));
   const groupIds = new Set(groups.map((group) => group.id));
+  if (groupIds.size !== groups.length) throw new Error("Identifiants de groupe dupliqués");
 
   const slots = input.slots.map((slot, index) => {
+    if (!slot || typeof slot !== "object") throw new Error("Créneau invalide");
     const old = Array.isArray(slot);
     const allocation = old ? slot[5] : slot.group_by_week;
     if (!Array.isArray(allocation) || allocation.length !== weeks.length) throw new Error(`Le créneau ${index + 1} doit avoir un groupe par semaine`);
@@ -184,11 +184,13 @@ function normaliseData(input) {
     });
     const examiner = String(old ? slot[1] : slot.examiner || "").trim().slice(0, 150);
     if (!examiner) throw new Error(`Colleur manquant dans le créneau ${index + 1}`);
+    const start = validTime(old ? slot[3] : slot.start, "Heure de début");
+    const end = validTime(old ? slot[4] : slot.end, "Heure de fin");
+    if (end <= start) throw new Error(`Heures du créneau ${index + 1} invalides : la fin doit suivre le début`);
     return {
       subject: subjectSlug(old ? slot[0] : slot.subject), examiner,
       day: daySlug(old ? slot[2] : slot.day),
-      start: validTime(old ? slot[3] : slot.start, "Heure de début"),
-      end: validTime(old ? slot[4] : slot.end, "Heure de fin"),
+      start, end,
       room: old || slot.room === null || slot.room === undefined ? null : String(slot.room).trim().slice(0, 100) || null,
       group_by_week: groupByWeek,
     };
@@ -243,7 +245,6 @@ async function handle(request, env) {
     if (!state.allowed) return json(request, env, { error: "Trop d’essais. Réessaie dans 15 minutes." }, 429);
     const body = await readBody(request);
     if (!(await passwordMatches(body?.password, env.ADMIN_PASSWORD))) {
-      await recordFailedLogin(env, state);
       return json(request, env, { error: "Mot de passe incorrect" }, 401);
     }
     await clearLoginAttempts(env, state.ipHash);
@@ -253,15 +254,21 @@ async function handle(request, env) {
   if (request.method === "POST" && url.pathname === "/api/admin/colloscope") {
     if (!(await tokenIsValid(request, env))) return json(request, env, { error: "Session expirée" }, 401);
     const input = await readBody(request);
+    const current = await readCurrentData(env);
+    if (!input || !Object.hasOwn(input, "expected_updated_at")) return json(request, env, { error: "Recharge le planning avant de l’enregistrer." }, 428);
+    if (input.expected_updated_at !== current.updated_at) return json(request, env, { error: "Le planning a été modifié dans une autre session. Exporte ton brouillon puis recharge la page." }, 409);
     // Older clients and planning-only imports must preserve the shared appearance.
-    if (input && input.appearance === undefined) input.appearance = (await readCurrentData(env)).data.appearance;
+    if (input.appearance === undefined) input.appearance = current.data.appearance;
     const data = normaliseData(input);
-    const updatedAt = new Date().toISOString();
-    await env.DB.prepare(`
+    const updatedAt = new Date(Math.max(Date.now(), (Date.parse(current.updated_at) || 0) + 1)).toISOString();
+    const saved = await env.DB.prepare(`
       INSERT INTO colloscope_data (id, json, updated_at)
       VALUES (?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at
-    `).bind(1, JSON.stringify(data), updatedAt).run();
+      WHERE colloscope_data.updated_at IS ?
+      RETURNING updated_at
+    `).bind(1, JSON.stringify(data), updatedAt, input.expected_updated_at).first();
+    if (!saved) return json(request, env, { error: "Le planning a été modifié dans une autre session. Exporte ton brouillon puis recharge la page." }, 409);
     return json(request, env, { ok: true, data, updated_at: updatedAt });
   }
 

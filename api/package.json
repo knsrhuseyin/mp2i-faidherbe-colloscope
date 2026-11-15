@@ -8,13 +8,14 @@
     "deploy": "wrangler deploy",
     "db:create": "wrangler d1 create colloscope-db",
     "db:migrate": "wrangler d1 migrations apply colloscope-db --remote",
-    "check": "node --check src/index.js && node --check src/notifications.js && node --check src/web-push.js && node test.mjs && node push.test.mjs && node appearance.test.mjs && node icons.test.mjs && node documents.test.mjs"
+    "check": "node --check src/index.js && node --check src/notifications.js && node --check src/web-push.js && node test.mjs && node push.test.mjs && node appearance.test.mjs && node icons.test.mjs && node documents.test.mjs && node regressions.test.mjs",
+    "check:runtime": "node runtime.test.mjs"
   },
   "devDependencies": {
+    "miniflare": "^5.20261113.0-beta",
     "wrangler": "^4.0.0"
   },
   "engines": {
     "node": ">=22.13"
   }
 }
-
