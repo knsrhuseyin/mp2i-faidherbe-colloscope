@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "d1_databases": [
+    {
+      "binding": "PREVIEW_DB",
+      "database_name": "colloscope-preview-db",
+      "database_id": "80d10bf8-83f5-4751-8a4a-83572bf40e36",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

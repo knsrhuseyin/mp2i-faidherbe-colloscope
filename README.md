@@ -116,6 +116,23 @@ Ouvre le Worker **colloscope-api** dans Cloudflare, puis **Settings → Builds**
 
 Le nom du Worker dans Cloudflare doit rester `colloscope-api`, comme dans `wrangler.jsonc`. La base D1 et les secrets créés plus haut restent attachés à ce Worker.
 
+### Aperçus des pull requests
+
+Dans **Settings → Builds → Previews Base**, conserver le répertoire `/api` et régler :
+
+| Réglage | Valeur |
+|---|---|
+| Build command | `npm run check && npm run db:migrate:preview` |
+| Preview command | `npx wrangler preview` |
+
+Le bloc `previews` de `api/wrangler.jsonc` utilise `colloscope-preview-db`, une base D1 distincte de la production. `api/wrangler.preview-migrations.jsonc` doit toujours pointer vers cette même base ; la commande de build lui applique les migrations avant chaque aperçu. Les aperçus partagent cette base de test. Pour isoler une branche supplémentaire, créer une autre base et modifier les deux configurations sur cette branche, comme décrit dans la [documentation Cloudflare](https://developers.cloudflare.com/workers/previews/resources/#d1-migrations).
+
+Les secrets de production ne sont pas copiés dans les aperçus. Sans secrets dédiés, la connexion administrateur et les notifications push restent désactivées. Les aperçus ne reçoivent pas les Cron Triggers de production. Les URL d’aperçu sont publiques.
+
+Le front Pages conserve l’API définie dans `front/config.js`, y compris dans les aperçus Pages. Pour tester le front contre le Worker d’aperçu, utiliser son URL dans une copie locale de `config.js` et ajouter l’origine exacte du front à `previews.vars.ALLOWED_ORIGINS` si nécessaire. La configuration actuelle autorise les origines locales et l’alias Pages de la PR #3 ; elle n’autorise pas automatiquement les autres branches.
+
+Si Pages échoue à l’envoi des fichiers avec le code Cloudflare `971` (limitation de débit), relancer le déploiement concerné après un délai ; cette erreur ne nécessite pas de modifier les sources.
+
 Dans le projet Pages, tu peux aussi régler **Build watch paths** sur `front/**`. Ainsi, une modification de l’API ne redéploiera pas inutilement le front, et inversement.
 
 À partir de là :
