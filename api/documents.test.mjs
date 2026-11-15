@@ -82,7 +82,7 @@ assert.equal(sqlite.prepare('SELECT count(*) AS n FROM document_announcements').
 let messages=[];let discordCode=429;
 globalThis.fetch=async(url,options)=>{
   if(url==='https://token.actions.githubusercontent.com/.well-known/jwks')return new Response(JSON.stringify({keys:[jwk]}));
-  assert.equal(url,hook+'?wait=true');assert.equal(options.redirect,'error');
+  assert.equal(url,hook+'?wait=true');assert.equal(options.redirect,'manual');
   messages.push(JSON.parse(options.body));return new Response('{}',{status:discordCode,headers:{'retry-after':'1'}});
 };
 await dispatchDocumentAnnouncements(env);

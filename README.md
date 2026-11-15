@@ -1,5 +1,7 @@
 # Colloscope Cloudflare
 
+Pour comprendre le rôle des fichiers et savoir où modifier le code, lire le [guide de lecture du code](README.code.md).
+
 Ce dépôt sépare complètement le site public et son API :
 
 ```text
@@ -176,7 +178,7 @@ Le catalogue et ses sources sont protégés côté API par un mot de passe de cl
 
 Appliquer `api/migrations/0003_documents.sql` avant la mise en production, puis définir le mot de passe et les trois sources dans l’administration. Les adresses réelles des dossiers sont stockées en D1, pas dans les fichiers statiques du site. Le catalogue n’est jamais mis en cache par le service worker. Un mot de passe partagé limite l’accès aux personnes qui le connaissent ; il ne vérifie pas individuellement l’identité d’un élève et ne protège pas les liens d’origine qui seraient publics.
 
-Le dépôt `knsrhuseyin/cahier-de-prepa-sync` publie les métadonnées via son job **Publier le catalogue Collo**, prévu sur les exécutions programmées et les pushs sur main. Le collecteur réutilise les secrets Google/RSS déjà présents dans ce dépôt pour les maths. Pour les dossiers publics d’anglais, il lit la structure de la page de partage, avec une limite vérifiée de moins de 50 enfants par dossier : si ce format change ou si un dossier atteint cette limite, la mise à jour échoue sans remplacer l’ancien catalogue. On peut alors migrer ce connecteur vers une autorisation Drive API dédiée. La physique utilise le WebDAV public du Nuage.
+Le dépôt `knsrhuseyin/cahier-de-prepa-sync` publie les métadonnées via son étape **Publier le catalogue Collo**, après la synchronisation Drive sur les passages programmés, et sur les pushs sur main. Le collecteur réutilise les secrets Google/RSS déjà présents dans ce dépôt pour les maths. Pour l’anglais, une clé optionnelle `GOOGLE_DRIVE_API_KEY` active la lecture des métadonnées publiques avec pagination. Sans cette clé, le lecteur de page publique reste disponible et refuse les dossiers de 50 entrées ou plus pour ne pas publier une liste tronquée. Une erreur conserve le dernier catalogue réussi. La physique utilise le WebDAV public du Nuage.
 
 L’authentification de publication utilise les jetons OIDC courts de GitHub Actions, avec audience `collo-document-catalogue`, dépôt/branche/workflow exacts vérifiés par le Worker. Aucun nouveau secret de publication permanent n’est nécessaire. Les appels `/api/documents/collector-config`, `/ingest` et `/collector-error` ne sont pas ouverts aux sessions élèves ni administrateur ordinaires. Un catalogue est préparé par lots, puis rendu visible atomiquement seulement après validation du nombre total d’entrées et de la révision de la source. En cas d’erreur, le dernier catalogue publié et sa date restent visibles. Changer une source efface son ancien catalogue avant le prochain passage du collecteur.
 

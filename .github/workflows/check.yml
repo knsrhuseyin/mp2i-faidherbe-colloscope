@@ -1,0 +1,28 @@
+name: Vérifier Collo
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm run check
+        working-directory: api
+      - run: npm ci --ignore-scripts
+        working-directory: api
+      - run: npm run format:check
+        working-directory: api
+      - run: npm run check:runtime
+        working-directory: api
+      - run: npx playwright install --with-deps chromium
+        working-directory: api
+      - run: npm run check:browser
+        working-directory: api
