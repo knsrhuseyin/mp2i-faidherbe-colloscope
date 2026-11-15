@@ -11,6 +11,8 @@ import {
 import { ensureDocumentUpdates } from "./document-store.js";
 import { discordSettings, saveDiscord, testDiscord } from "./document-discord.js";
 const SOURCE_NAMES = { maths: "Mathématiques", english: "Anglais", physics: "Physique" };
+// D1 limite les motifs LIKE à 50 octets ; ce préfixe de 54 octets est comparé littéralement.
+const MATHS_DOWNLOAD_PREFIX = "https://cahier-de-prepa.fr/mp2i-faidherbe/download?id=";
 const fold = (value) =>
   String(value)
     .normalize("NFD")
@@ -191,7 +193,7 @@ export async function ingest(env, input) {
       items.flatMap((i) => [
         env.DB.prepare(
           `INSERT INTO document_items(source_id,generation,id,parent_id,name,kind,mime,size,modified_at,url,path,search_text)
-      VALUES(?,?,?,?,?,?,?,?,?,COALESCE((SELECT url FROM document_items WHERE source_id=? AND generation=? AND id=? AND ?=1 AND url LIKE 'https://cahier-de-prepa.fr/mp2i-faidherbe/download?id=%'),?),?,?) ON CONFLICT(source_id,generation,id) DO UPDATE SET parent_id=excluded.parent_id,name=excluded.name,kind=excluded.kind,mime=excluded.mime,size=excluded.size,modified_at=excluded.modified_at,url=excluded.url,path=excluded.path,search_text=excluded.search_text`,
+      VALUES(?,?,?,?,?,?,?,?,?,COALESCE((SELECT url FROM document_items WHERE source_id=? AND generation=? AND id=? AND ?=1 AND substr(url,1,?)=?),?),?,?) ON CONFLICT(source_id,generation,id) DO UPDATE SET parent_id=excluded.parent_id,name=excluded.name,kind=excluded.kind,mime=excluded.mime,size=excluded.size,modified_at=excluded.modified_at,url=excluded.url,path=excluded.path,search_text=excluded.search_text`,
         ).bind(
           source.id,
           input.generation,
@@ -210,6 +212,8 @@ export async function ingest(env, input) {
             new URL(i.url).hostname === "drive.google.com"
             ? 1
             : 0,
+          MATHS_DOWNLOAD_PREFIX.length,
+          MATHS_DOWNLOAD_PREFIX,
           i.url,
           i.path,
           fold(i.name + " " + i.path),

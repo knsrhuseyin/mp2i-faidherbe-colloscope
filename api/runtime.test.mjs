@@ -171,8 +171,69 @@ try {
   assert.equal(englishOptions.notify_new, false);
   assert.equal(englishOptions.notify_updates, true);
   assert.equal(englishOptions.role_id, expectedRole);
+  // D1 limits LIKE patterns to 50 bytes; an original Cahier URL is longer.
+  // Reimporting a Drive mirror after that document leaves RSS must preserve its original link.
+  const { ingest } = await import("./src/documents.js");
+  await call(
+    "/api/admin/documents/source",
+    {
+      id: "maths",
+      root_url: "https://drive.google.com/drive/folders/RuntimeMathsFolder1234",
+    },
+    token,
+  );
+  const mathsSource = await db.prepare("SELECT * FROM document_sources WHERE id='maths'").first();
+  const mathsBase = { source: "maths", revision: mathsSource.revision };
+  const originalUrl = "https://cahier-de-prepa.fr/mp2i-faidherbe/download?id=42";
+  const mathsFile = {
+    id: "RuntimeMathArchive1234",
+    parent_id: "",
+    name: "Archive.pdf",
+    kind: "file",
+    mime: "application/pdf",
+    size: 1234,
+    modified_at: "2026-11-01T10:00:00Z",
+    published_at: "2025-11-01T09:00:00Z",
+    url: originalUrl,
+    path: "Devoirs_annees_anterieures/2024-2025",
+  };
+  for (const [generation, file] of [
+    ["maths-rss", mathsFile],
+    [
+      "maths-archive",
+      {
+        ...mathsFile,
+        published_at: null,
+        url: "https://drive.google.com/file/d/RuntimeMathArchive1234/view",
+      },
+    ],
+  ]) {
+    assert.deepEqual(await ingest({ DB: db }, { ...mathsBase, generation, items: [file] }), {
+      ok: true,
+    });
+    assert.deepEqual(
+      await ingest(
+        { DB: db },
+        {
+          ...mathsBase,
+          generation,
+          items: [],
+          complete: true,
+          expected_count: 1,
+        },
+      ),
+      { ok: true },
+    );
+  }
+  const archive = await db
+    .prepare(
+      "SELECT i.url,d.published_at FROM document_items i JOIN document_dates d ON d.source_id=i.source_id AND d.generation=i.generation AND d.item_id=i.id WHERE i.source_id='maths' AND i.generation='maths-archive'",
+    )
+    .first();
+  assert.equal(archive.url, originalUrl);
+  assert.equal(archive.published_at, "2025-11-01T09:00:00.000Z");
   console.log(
-    "Workers runtime tests passed: concurrent login limits, conflicting saves, Discord delivery and redirect rejection, with no external network access.",
+    "Workers runtime tests passed: concurrent login limits, conflicting saves, Discord delivery, redirect rejection and D1 maths archive link preservation, with no external network access.",
   );
 } finally {
   await mf.dispose();
