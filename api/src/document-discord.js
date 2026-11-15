@@ -1,9 +1,11 @@
 /**
- * Annonces Discord des nouveaux documents d’anglais et de physique.
+ * Annonces Discord des nouveaux documents et mises à jour des trois matières.
  * Gère le chiffrement des webhooks et la file persistante, sans les exposer au navigateur.
  */
 import { ensureDocumentUpdates } from "./document-store.js";
-const subjects = { english: "Anglais", physics: "Physique" };
+const subjects = { maths: "Mathématiques", english: "Anglais", physics: "Physique" };
+// Noms internes constants ; aucune entrée utilisateur ne choisit une table SQL.
+const announcementTables = ["document_announcements", "document_change_announcements"];
 const enc = new TextEncoder();
 const encode = (b) => btoa(String.fromCharCode(...new Uint8Array(b)));
 const decode = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -66,7 +68,16 @@ async function unseal(env, source, value) {
 export async function discordSettings(env) {
   const rows = (
     await env.DB.prepare(
-      `SELECT d.source_id,d.enabled,d.updated_at,d.last_sent_at,d.last_error,(SELECT COUNT(*) FROM document_announcements a WHERE a.source_id=d.source_id AND a.state='uncertain') AS uncertain,(SELECT COUNT(*) FROM document_announcements a WHERE a.source_id=d.source_id AND a.state IN ('pending','retry','sending')) AS pending,(SELECT COUNT(*) FROM document_announcements a WHERE a.source_id=d.source_id AND a.state='sent') AS sent FROM document_discord d`,
+      `SELECT d.source_id,d.enabled,d.updated_at,d.last_sent_at,d.last_error,
+      o.notify_new,o.notify_updates,o.notify_existing,o.role_id,
+      COALESCE(a.uncertain,0) AS uncertain,COALESCE(a.pending,0) AS pending,COALESCE(a.sent,0) AS sent
+      FROM document_discord d LEFT JOIN (
+        SELECT source_id,SUM(state='uncertain') AS uncertain,
+        SUM(state IN ('pending','retry','sending')) AS pending,SUM(state='sent') AS sent
+        FROM (SELECT source_id,state FROM document_announcements UNION ALL SELECT source_id,state FROM document_change_announcements)
+        GROUP BY source_id
+      ) a ON a.source_id=d.source_id
+      LEFT JOIN document_discord_options o ON o.source_id=d.source_id`,
     ).all()
   ).results;
   return Object.entries(subjects).map(([id, label]) => {
@@ -76,6 +87,10 @@ export async function discordSettings(env) {
       label,
       configured: !!row,
       enabled: !!row?.enabled,
+      notify_new: row?.notify_new !== 0,
+      notify_updates: row?.notify_updates !== 0,
+      notify_existing: !!row?.notify_existing,
+      role_id: row?.role_id || "",
       pending: row?.pending || 0,
       sent: row?.sent || 0,
       uncertain: row?.uncertain || 0,
@@ -93,13 +108,37 @@ export async function saveDiscord(env, input) {
   const existing = await env.DB.prepare("SELECT * FROM document_discord WHERE source_id=?")
     .bind(input.id)
     .first();
+  const previousOptions = await env.DB.prepare(
+    "SELECT * FROM document_discord_options WHERE source_id=?",
+  )
+    .bind(input.id)
+    .first();
+  for (const name of ["notify_new", "notify_updates", "notify_existing"])
+    if (input[name] !== undefined && typeof input[name] !== "boolean")
+      throw new Error("Options Discord invalides");
+  if (
+    input.role_id !== undefined &&
+    (typeof input.role_id !== "string" || !/^(?:[0-9]{17,20})?$/.test(input.role_id.trim()))
+  )
+    throw new Error("Le rôle Discord doit être un identifiant numérique de 17 à 20 chiffres.");
+  const notifyNew = input.notify_new ?? previousOptions?.notify_new !== 0;
+  const notifyUpdates = input.notify_updates ?? previousOptions?.notify_updates !== 0;
+  const notifyExisting = input.notify_existing ?? !!previousOptions?.notify_existing;
+  const roleId = input.role_id?.trim() ?? previousOptions?.role_id ?? "";
+  if (!existing && notifyExisting && (!input.enabled || !notifyNew))
+    throw new Error(
+      "Active les annonces et les nouveaux fichiers pour annoncer le catalogue initial.",
+    );
   const value = typeof input.webhook === "string" ? input.webhook.trim() : "";
   if (input.remove === true) {
     await env.DB.batch([
       env.DB.prepare("DELETE FROM document_discord WHERE source_id=?").bind(input.id),
-      env.DB.prepare(
-        "UPDATE document_announcements SET state='cancelled' WHERE source_id=? AND state IN ('pending','retry')",
-      ).bind(input.id),
+      env.DB.prepare("DELETE FROM document_discord_options WHERE source_id=?").bind(input.id),
+      ...announcementTables.map((table) =>
+        env.DB.prepare(
+          `UPDATE ${table} SET state='cancelled' WHERE source_id=? AND state IN ('pending','retry')`,
+        ).bind(input.id),
+      ),
     ]);
     return { ok: true };
   }
@@ -110,12 +149,37 @@ export async function saveDiscord(env, input) {
     env.DB.prepare(
       `INSERT INTO document_discord(source_id,webhook,enabled,updated_at) VALUES(?,?,?,?) ON CONFLICT(source_id) DO UPDATE SET webhook=excluded.webhook,enabled=excluded.enabled,updated_at=excluded.updated_at,last_error=NULL`,
     ).bind(input.id, encrypted, input.enabled ? 1 : 0, now),
+    env.DB.prepare(
+      `INSERT INTO document_discord_options(source_id,notify_new,notify_updates,notify_existing,role_id)
+      VALUES(?,?,?,?,?) ON CONFLICT(source_id) DO UPDATE SET notify_new=excluded.notify_new,
+      notify_updates=excluded.notify_updates,notify_existing=excluded.notify_existing,role_id=excluded.role_id`,
+    ).bind(input.id, notifyNew ? 1 : 0, notifyUpdates ? 1 : 0, notifyExisting ? 1 : 0, roleId),
     // A newly enabled/replaced destination starts with future discoveries, not its backlog.
     ...(value || !input.enabled || !existing?.enabled
+      ? announcementTables.map((table) =>
+          env.DB.prepare(
+            `UPDATE ${table} SET state='cancelled' WHERE source_id=? AND state IN ('pending','retry')`,
+          ).bind(input.id),
+        )
+      : []),
+    ...announcementTables.flatMap((table, index) =>
+      (index === 0 ? !notifyNew : !notifyUpdates)
+        ? [
+            env.DB.prepare(
+              `UPDATE ${table} SET state='cancelled' WHERE source_id=? AND state IN ('pending','retry')`,
+            ).bind(input.id),
+          ]
+        : [],
+    ),
+    // L'historique est une demande explicite au premier enregistrement seulement.
+    ...(!existing && input.enabled && notifyNew && notifyExisting
       ? [
           env.DB.prepare(
-            "UPDATE document_announcements SET state='cancelled' WHERE source_id=? AND state IN ('pending','retry')",
-          ).bind(input.id),
+            `INSERT OR IGNORE INTO document_announcements(source_id,revision,item_id,created_at)
+        SELECT s.id,s.revision,i.id,? FROM document_sources s
+        JOIN document_items i ON i.source_id=s.id AND i.generation=s.generation
+        WHERE s.id=? AND i.kind='file'`,
+          ).bind(now, input.id),
         ]
       : []),
   ]);
@@ -128,11 +192,14 @@ const escaped = (text, limit) =>
     .slice(0, limit);
 export function announcementPayload(item) {
   return {
-    allowed_mentions: { parse: [] },
+    ...(item.role_id ? { content: `<@&${item.role_id}>` } : {}),
+    allowed_mentions: { parse: [], ...(item.role_id ? { roles: [item.role_id] } : {}) },
     embeds: [
       {
-        title: "📚 Nouveau fichier · " + subjects[item.source_id],
-        color: item.source_id === "english" ? 0x9b59b6 : 0xe67e22,
+        title:
+          (item.change_kind === "modified" ? "📝 Fichier mis à jour · " : "📚 Nouveau fichier · ") +
+          subjects[item.source_id],
+        color: { maths: 0x3498db, english: 0x9b59b6, physics: 0xe67e22 }[item.source_id],
         description: escaped(item.name, 1000),
         url: item.url,
         fields: [
@@ -201,24 +268,52 @@ async function send(env, source, encrypted, payload) {
     };
   }
 }
-export async function testDiscord(env, id) {
+export async function testDiscord(env, id, latest = false) {
   if (!Object.hasOwn(subjects, id)) throw new Error("Matière Discord inconnue");
+  if (typeof latest !== "boolean") throw new Error("Option de test Discord invalide");
   const row = await env.DB.prepare("SELECT webhook FROM document_discord WHERE source_id=?")
     .bind(id)
     .first();
   if (!row) return { status: 400, error: "Enregistre le webhook de cette matière avant le test." };
-  const result = await send(env, id, row.webhook, {
-    allowed_mentions: { parse: [] },
+  const options = await env.DB.prepare(
+    "SELECT role_id FROM document_discord_options WHERE source_id=?",
+  )
+    .bind(id)
+    .first();
+  const roleId = options?.role_id || "";
+  let payload = {
+    ...(roleId ? { content: `<@&${roleId}>` } : {}),
+    allowed_mentions: { parse: [], ...(roleId ? { roles: [roleId] } : {}) },
     embeds: [
       {
         title: "✅ Collo · " + subjects[id],
         description:
-          "Le salon est prêt pour les nouveaux fichiers. Vérification des sources toutes les dix minutes environ.",
+          "Le salon est prêt pour les nouveaux fichiers et leurs mises à jour. Vérification des sources toutes les dix minutes environ.",
         color: 0x2ecc71,
         footer: { text: "HX1 · 67" },
       },
     ],
-  });
+  };
+  if (latest) {
+    const file = await env.DB.prepare(
+      `SELECT i.*,s.id AS source_id FROM document_sources s
+      JOIN document_items i ON i.source_id=s.id AND i.generation=s.generation
+      LEFT JOIN document_dates d ON d.source_id=i.source_id AND d.generation=i.generation AND d.item_id=i.id
+      WHERE s.id=? AND i.kind='file'
+      ORDER BY julianday(COALESCE(d.published_at,i.modified_at)) DESC,i.id LIMIT 1`,
+    )
+      .bind(id)
+      .first();
+    if (!file)
+      return { status: 400, error: "Aucun fichier disponible dans cette matière pour le test." };
+    payload = announcementPayload({
+      ...file,
+      role_id: roleId,
+      created_at: new Date().toISOString(),
+    });
+    payload.embeds[0].title = "🧪 Test · Dernier fichier · " + subjects[id];
+  }
+  const result = await send(env, id, row.webhook, payload);
   await env.DB.prepare("UPDATE document_discord SET last_error=? WHERE source_id=?")
     .bind(result.error, id)
     .run();
@@ -227,46 +322,63 @@ export async function testDiscord(env, id) {
 /** Réserve chaque annonce en SQL avant l’envoi pour éviter deux envois simultanés du même élément. */
 export async function dispatchDocumentAnnouncements(env, now = Date.now()) {
   await ensureDocumentUpdates(env);
-  // Never blindly retry an expired request whose delivery may have succeeded.
-  await env.DB.prepare(
-    "UPDATE document_announcements SET state='uncertain' WHERE state='sending' AND lease_until<?",
-  )
-    .bind(now)
-    .run();
-  const rows = (
-    await env.DB.prepare(
-      `SELECT a.*,i.name,i.path,i.url,d.webhook FROM document_announcements a
-    JOIN document_sources s ON s.id=a.source_id AND s.revision=a.revision
-    JOIN document_items i ON i.source_id=s.id AND i.generation=s.generation AND i.id=a.item_id
-    JOIN document_discord d ON d.source_id=a.source_id AND d.enabled=1
-    WHERE a.state IN ('pending','retry') AND a.next_attempt<=? ORDER BY a.created_at,a.item_id LIMIT 10`,
-    )
-      .bind(now)
-      .all()
-  ).results;
-  for (const row of rows) {
-    const claim = await env.DB.prepare(
-      "UPDATE document_announcements SET state='sending',lease_until=?,attempts=attempts+1 WHERE source_id=? AND revision=? AND item_id=? AND state IN ('pending','retry') AND next_attempt<=?",
-    )
-      .bind(now + 120000, row.source_id, row.revision, row.item_id, now)
-      .run();
-    if (!claim.meta.changes) continue;
-    const result = await send(env, row.source_id, row.webhook, announcementPayload(row));
-    const sent = result.state === "sent" ? new Date(now).toISOString() : null;
-    await env.DB.batch([
+  // Une livraison sans confirmation n’est jamais réémise automatiquement.
+  await env.DB.batch(
+    announcementTables.map((table) =>
       env.DB.prepare(
-        "UPDATE document_announcements SET state=?,sent_at=?,next_attempt=? WHERE source_id=? AND revision=? AND item_id=? AND state='sending'",
-      ).bind(
-        result.state,
-        sent,
-        now + (result.delay || 600000),
+        `UPDATE ${table} SET state='uncertain' WHERE state='sending' AND lease_until<?`,
+      ).bind(now),
+    ),
+  );
+  let remaining = 10;
+  for (const table of announcementTables) {
+    const modified = table === "document_change_announcements";
+    const versionCondition = modified ? " AND generation=?" : "";
+    const rows = (
+      await env.DB.prepare(
+        `SELECT a.*${modified ? "" : ",i.name,i.path,i.url"},d.webhook,o.role_id FROM ${table} a
+      JOIN document_sources s ON s.id=a.source_id AND s.revision=a.revision
+      JOIN document_items i ON i.source_id=s.id AND i.generation=s.generation AND i.id=a.item_id
+      JOIN document_discord d ON d.source_id=a.source_id AND d.enabled=1
+      LEFT JOIN document_discord_options o ON o.source_id=a.source_id
+      WHERE COALESCE(o.${modified ? "notify_updates" : "notify_new"},1)=1
+      AND a.state IN ('pending','retry') AND a.next_attempt<=? ORDER BY a.created_at,a.item_id LIMIT ?`,
+      )
+        .bind(now, remaining)
+        .all()
+    ).results;
+    for (const row of rows) {
+      const versionArgs = modified ? [row.generation] : [];
+      const claim = await env.DB.prepare(
+        `UPDATE ${table} SET state='sending',lease_until=?,attempts=attempts+1 WHERE source_id=? AND revision=? AND item_id=? AND state IN ('pending','retry') AND next_attempt<=?${versionCondition}`,
+      )
+        .bind(now + 120000, row.source_id, row.revision, row.item_id, now, ...versionArgs)
+        .run();
+      if (!claim.meta.changes) continue;
+      remaining--;
+      const result = await send(
+        env,
         row.source_id,
-        row.revision,
-        row.item_id,
-      ),
-      env.DB.prepare(
-        "UPDATE document_discord SET last_sent_at=COALESCE(?,last_sent_at),last_error=? WHERE source_id=?",
-      ).bind(sent, result.error, row.source_id),
-    ]);
+        row.webhook,
+        announcementPayload({ ...row, change_kind: modified ? "modified" : "new" }),
+      );
+      const sent = result.state === "sent" ? new Date(now).toISOString() : null;
+      await env.DB.batch([
+        env.DB.prepare(
+          `UPDATE ${table} SET state=?,sent_at=?,next_attempt=? WHERE source_id=? AND revision=? AND item_id=? AND state='sending'${versionCondition}`,
+        ).bind(
+          result.state,
+          sent,
+          now + (result.delay || 600000),
+          row.source_id,
+          row.revision,
+          row.item_id,
+          ...versionArgs,
+        ),
+        env.DB.prepare(
+          "UPDATE document_discord SET last_sent_at=COALESCE(?,last_sent_at),last_error=? WHERE source_id=?",
+        ).bind(sent, result.error, row.source_id),
+      ]);
+    }
   }
 }

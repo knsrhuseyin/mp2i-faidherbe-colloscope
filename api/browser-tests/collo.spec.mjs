@@ -158,6 +158,50 @@ test('initial load error offers a working retry', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test('admin configures, tests and pauses the maths webhook independently', async ({ page }) => {
+  const calls = [];
+  const errors = await mount(page, (url, request) => {
+    if (url.pathname === '/api/admin/documents') return {
+      password_configured: true, sources: [],
+      discord: [{ id: 'maths', label: 'Mathématiques' }, { id: 'english', label: 'Anglais' }, { id: 'physics', label: 'Physique' }],
+    };
+    if (url.pathname.startsWith('/api/admin/documents/discord')) {
+      expect(request.headers().authorization).toBe('Bearer admin-test-token');
+      calls.push({ path: url.pathname, body: request.postDataJSON() });
+      return { ok: true };
+    }
+  });
+  await page.locator('#adminOpen').click();
+  await page.locator('#adminPassword').fill('test-password');
+  await page.locator('#loginForm button[type="submit"]').click();
+  await page.locator('[data-admin-tab="documents"]').click();
+  await expect(page.locator('[data-document-discord]')).toHaveCount(3);
+  const maths = page.locator('[data-document-discord="maths"]');
+  await expect(maths.locator('h5')).toHaveText('Mathématiques');
+  await expect(maths.locator('[data-discord-test]')).toBeDisabled();
+  const webhook = 'https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz_1234567890';
+  await maths.locator('[name="webhook"]').fill(webhook);
+  await maths.locator('[name="notify_existing"]').check();
+  await maths.locator('button[type="submit"]').click();
+  await expect(maths.locator('[role="status"]')).toContainText('Webhook enregistré');
+  expect(calls.at(-1)).toEqual({ path: '/api/admin/documents/discord', body: { id: 'maths', webhook, enabled: true, notify_new: true, notify_updates: true, notify_existing: true, role_id: '' } });
+  await expect(maths.locator('[name="webhook"]')).toHaveValue('');
+  await expect(maths.locator('[name="notify_existing"]')).toBeDisabled();
+  await maths.locator('[data-discord-test]').click();
+  await expect(maths.locator('[role="status"]')).toContainText('Message de test envoyé');
+  expect(calls.at(-1)).toEqual({ path: '/api/admin/documents/discord/test', body: { id: 'maths' } });
+  await maths.locator('[data-discord-test-latest]').click();
+  await expect(maths.locator('[role="status"]')).toContainText('dernier fichier envoyé');
+  expect(calls.at(-1)).toEqual({ path: '/api/admin/documents/discord/test', body: { id: 'maths', latest: true } });
+  await maths.locator('[name="notify_updates"]').uncheck();
+  await maths.locator('[name="role_id"]').fill('123456789012345678');
+  await maths.locator('[name="enabled"]').uncheck();
+  await maths.locator('button[type="submit"]').click();
+  await expect(maths.locator('[role="status"]')).toContainText('Webhook enregistré');
+  expect(calls.at(-1)).toEqual({ path: '/api/admin/documents/discord', body: { id: 'maths', webhook: '', enabled: false, notify_new: true, notify_updates: false, notify_existing: true, role_id: '123456789012345678' } });
+  expect(errors).toEqual([]);
+});
+
 test('editing retains its base version and preserves the draft on conflict', async ({ page }) => {
   let reads = 0, saved;
   const errors = await mount(page, (url, request) => {

@@ -116,6 +116,23 @@ Ouvre le Worker **colloscope-api** dans Cloudflare, puis **Settings → Builds**
 
 Le nom du Worker dans Cloudflare doit rester `colloscope-api`, comme dans `wrangler.jsonc`. La base D1 et les secrets créés plus haut restent attachés à ce Worker.
 
+### Aperçus des pull requests
+
+Dans **Settings → Builds → Previews Base**, conserver le répertoire `/api` et régler :
+
+| Réglage | Valeur |
+|---|---|
+| Build command | `npm run check && npm run db:migrate:preview` |
+| Preview command | `npx wrangler preview` |
+
+Le bloc `previews` de `api/wrangler.jsonc` utilise `colloscope-preview-db`, une base D1 distincte de la production. `api/wrangler.preview-migrations.jsonc` doit toujours pointer vers cette même base ; la commande de build lui applique les migrations avant chaque aperçu. Les aperçus partagent cette base de test. Pour isoler une branche supplémentaire, créer une autre base et modifier les deux configurations sur cette branche, comme décrit dans la [documentation Cloudflare](https://developers.cloudflare.com/workers/previews/resources/#d1-migrations).
+
+Les secrets de production ne sont pas copiés dans les aperçus. Sans secrets dédiés, la connexion administrateur et les notifications push restent désactivées. Les aperçus ne reçoivent pas les Cron Triggers de production. Les URL d’aperçu sont publiques.
+
+Le front Pages conserve l’API définie dans `front/config.js`, y compris dans les aperçus Pages. Pour tester le front contre le Worker d’aperçu, utiliser son URL dans une copie locale de `config.js` et ajouter l’origine exacte du front à `previews.vars.ALLOWED_ORIGINS` si nécessaire. La configuration actuelle autorise les origines locales et l’alias Pages de la PR #3 ; elle n’autorise pas automatiquement les autres branches.
+
+Si Pages échoue à l’envoi des fichiers avec le code Cloudflare `971` (limitation de débit), relancer le déploiement concerné après un délai ; cette erreur ne nécessite pas de modifier les sources.
+
 Dans le projet Pages, tu peux aussi régler **Build watch paths** sur `front/**`. Ainsi, une modification de l’API ne redéploiera pas inutilement le front, et inversement.
 
 À partir de là :
@@ -189,8 +206,23 @@ Les tests `api/documents.test.mjs` couvrent l’accès élève/admin, le hash, l
 
 Les ajouts détectés après l’initialisation gardent une date de première détection stable. Les archives existantes ne sont pas considérées comme nouvellement ajoutées. Pour les maths, la date de publication du RSS Cahier de Prépa est conservée, y compris après disparition du flux ; la date de la copie Drive ne sert jamais de date de cours. Sans date de publication, l’anglais et la physique affichent explicitement la date de modification fournie par la source. Les dates inconnues sont classées en dernier. Le tri utilise des instants UTC et un ordre stable pour la pagination.
 
-Dans **Admin → Documents → Annonces Discord**, configurer un webhook pour le salon d’anglais et un pour le salon de physique. Les URLs sont chiffrées en D1 avec une clé dérivée de `SESSION_SECRET`, jamais renvoyées au navigateur ou au collecteur. La rotation de ce secret impose de réenregistrer les webhooks. Les actions d’administration permettent de mettre en pause, supprimer ou envoyer un test dans chaque salon.
+Dans **Admin → Documents → Annonces Discord**, configurer un webhook pour les mathématiques, un pour l’anglais et un pour la physique. Les trois peuvent pointer vers le même salon Discord. Les URLs sont chiffrées en D1 avec une clé dérivée de `SESSION_SECRET`, jamais renvoyées au navigateur ou au collecteur. La rotation de ce secret impose de réenregistrer les webhooks. Les actions d’administration permettent de mettre en pause, supprimer ou envoyer un test dans chaque salon.
 
-Le collecteur existant vérifie les sources selon sa planification GitHub Actions toutes les dix minutes environ (des retards GitHub sont possibles). Une publication complète du catalogue ajoute les nouveaux fichiers à une file D1 ; le cron Worker existant délivre ces messages. Aucun historique n’est annoncé à l’activation et les dossiers, renommages et réapparitions déjà connus ne créent pas de doublon. Les refus certains sont réessayés, les envois dont la réponse est inconnue sont signalés dans Admin sans réémission automatique pour éviter un doublon. Les messages ne mentionnent aucun rôle/utilisateur.
+Tous les réglages Discord sont disponibles dans cette administration : activation par matière, annonces des nouveaux fichiers et des mises à jour indépendamment, identifiant facultatif d’un rôle à mentionner, inclusion du catalogue existant au premier enregistrement et tests de connexion ou du dernier fichier. L’identifiant du rôle contient 17 à 20 chiffres ; un champ vide supprime les mentions. Seul le rôle configuré est autorisé dans le message, jamais `@everyone` ni une mention présente dans le nom d’un document. Les deux tests utilisent le rôle enregistré et ne modifient pas les files d’annonces.
 
-La migration idempotente `api/migrations/0004_document_updates.sql` ajoute les dates, l’historique et la file Discord. Le Worker initialise aussi automatiquement ces tables au premier accès Documents ou au premier cron, et prend le catalogue existant comme référence initiale. Les rappels de colle et les annonces maths existantes restent indépendants.
+L’annonce du catalogue existant est désactivée par défaut et doit être choisie lors du premier enregistrement, avec les annonces et les nouveautés activées. Elle ajoute le catalogue déjà publié à la file ou, si la source n’a encore jamais été collectée, son premier instantané. Réenregistrer un webhook existant ne rejoue pas cet historique. Les autres options sont modifiables à tout moment. Désactiver un type d’annonce annule ses messages en attente ; sa réactivation ne rattrape pas les modifications ignorées.
+
+Le collecteur existant vérifie les sources selon sa planification GitHub Actions toutes les dix minutes environ (des retards GitHub sont possibles). Une publication complète du catalogue compare les identifiants, tailles et dates de modification avec l’instantané précédent dans D1. Elle ajoute les nouveaux fichiers et les mises à jour détectées à des files D1 ; le cron Worker existant délivre ces messages (« Nouveau fichier » ou « Fichier mis à jour »). Collo ne télécharge aucun document pour cette comparaison ; la synchronisation Drive existante des maths reste indépendante. Par défaut, aucun historique n’est annoncé à l’activation. Les dossiers et les renommages/déplacements seuls à identifiant et métadonnées inchangés ne déclenchent pas d’annonce. Les réapparitions déjà connues ne sont pas annoncées comme des nouveautés. Les refus certains sont réessayés, les envois dont la réponse est inconnue sont signalés dans Admin sans réémission automatique pour éviter un doublon. Seul le rôle explicitement configuré peut être mentionné ; aucun utilisateur n’est mentionné.
+
+La migration idempotente `api/migrations/0004_document_updates.sql` ajoute les dates, l’historique et la file Discord. Le Worker initialise aussi automatiquement ces tables au premier accès Documents ou au premier cron, et prend le catalogue existant comme référence initiale. Les rappels de colle restent indépendants.
+
+Le workflow de `cahier-de-prepa-sync` doit utiliser le mode `--collo-discord` de la modification associée : il ignore alors tous ses anciens réglages Discord et n’envoie plus de messages lui-même. Il continue la synchronisation Drive et la publication du catalogue. Aucune variable ou secret GitHub Discord n’est à modifier ou supprimer. Le webhook et le rôle ne sont pas transférés automatiquement : renseigner leurs valeurs dans Collo. Pour la bascule, déployer Collo et vérifier ses réglages, puis fusionner la modification du collecteur avant d’activer les annonces maths dans Collo. Si l’option de catalogue existant est souhaitée, l’activer lors du premier enregistrement actif, après cette bascule.
+
+
+La détection des mises à jour repose sur la **taille et la date de modification fournies par la source**, pas sur une empreinte du contenu. Une métadonnée manquante ne suffit pas à déclencher une annonce. Si le fournisseur ne change aucun de ces champs, une modification du contenu peut passer inaperçue. Sur Nuage, l’identifiant actuel dépend du chemin : un renommage peut donc apparaître comme un nouveau fichier. Les suppressions ne produisent pas de notification. Le premier passage sur une nouvelle source et les changements pendant une pause restent silencieux ; une nouveauté encore en attente est envoyée avec les informations les plus récentes.
+
+La migration [`0005_document_changes.sql`](api/migrations/0005_document_changes.sql) crée la file des mises à jour ; le bootstrap idempotent du Worker la crée également si les migrations sont appliquées plus tard. Les anciennes annonces de nouveaux fichiers sont conservées.
+
+La migration [`0006_discord_options.sql`](api/migrations/0006_discord_options.sql) conserve les choix de nouveautés, mises à jour, catalogue initial et rôle. Elle est aussi incluse dans le bootstrap idempotent. Les webhooks existants gardent leurs annonces de nouveautés/mises à jour, sans mention ni reprise historique, tant qu’aucune option n’est modifiée dans l’admin.
+
+Un NAS n’est pas nécessaire à ce fonctionnement : GitHub Actions effectue la collecte et D1 conserve les états entre les passages. Faire tourner le collecteur actuel sur un NAS demanderait une authentification de publication distincte : l’API accepte volontairement seulement l’identité OIDC du workflow GitHub autorisé. Ne pas désactiver cette vérification pour déplacer le script.

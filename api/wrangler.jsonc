@@ -17,6 +17,19 @@
       "database_id": "0760fc52-6806-48ee-8c54-dfb28ac5db10",
       "migrations_dir": "migrations"
     }
-  ]
+  ],
+  "previews": {
+    "vars": {
+      "ALLOWED_ORIGINS": "http://localhost:8080,http://127.0.0.1:8080,https://feat-document-change-notific.mp2i-faidherbe.pages.dev"
+    },
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "colloscope-preview-db",
+        "database_id": "80d10bf8-83f5-4751-8a4a-83572bf40e36",
+        "migrations_dir": "migrations"
+      }
+    ]
+  }
 }
 

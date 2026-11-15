@@ -290,8 +290,8 @@ export async function renderDocumentsAdmin() {
         })
         .join(
           "",
-        )}</div><h4>Annonces Discord</h4><p class="help">Un salon pour l’anglais, un pour la physique. Dans chaque salon Discord : Modifier le salon → Intégrations → Webhooks → Nouveau webhook → Copier l’URL. Colle l’URL correspondante ci-dessous. Les sources sont vérifiées toutes les dix minutes environ ; seuls les nouveaux fichiers seront annoncés, sans publier l’historique.</p>
-      <div id="documentDiscordEditors">${(settings.discord || []).map((d) => `<form class="document-source-editor" data-document-discord="${d.id}"><h5>${escape(d.label)}</h5><p class="help">${d.configured ? (d.enabled ? "Annonces activées" : "Annonces en pause") : "Webhook à configurer"}${d.last_sent_at ? " · Dernier envoi : " + date(d.last_sent_at) : ""}${d.error ? " · " + escape(d.error) : ""}</p><label class="field"><span>${d.configured ? "Remplacer l’URL du webhook (laisser vide pour la conserver)" : "URL du webhook de ce salon"}</span><input name="webhook" type="password" maxlength="400" autocomplete="new-password" placeholder="https://discord.com/api/webhooks/…" ${d.configured ? "" : "required"}></label><label><input name="enabled" type="checkbox" ${!d.configured || d.enabled ? "checked" : ""}> Annoncer les nouveaux fichiers</label><div class="document-discord-actions"><button class="secondary" type="submit">Enregistrer</button><button class="secondary" type="button" data-discord-test ${d.configured ? "" : "disabled"}>Envoyer un test</button>${d.configured ? '<button class="secondary" type="button" data-discord-remove>Supprimer le webhook</button>' : ""}</div><p role="status"></p></form>`).join("")}</div>
+        )}</div><h4>Annonces Discord</h4><p class="help">Tous les réglages Discord sont ici, pour les mathématiques, l’anglais et la physique. Aucun réglage Discord dans GitHub n’est nécessaire avec le collecteur géré par Collo. Un webhook par matière. Ils peuvent pointer vers le même salon. Dans chaque salon Discord : Modifier le salon → Intégrations → Webhooks → Nouveau webhook → Copier l’URL. Colle l’URL correspondante ci-dessous. Les sources sont vérifiées toutes les dix minutes environ ; les nouveaux fichiers et les changements de taille ou de date de modification seront annoncés, sans télécharger les documents. L’historique reste silencieux sauf choix explicite ci-dessous.</p>
+      <div id="documentDiscordEditors">${(settings.discord || []).map((d) => `<form class="document-source-editor" data-document-discord="${d.id}"><h5>${escape(d.label)}</h5><p class="help">${d.configured ? (d.enabled ? "Annonces activées" : "Annonces en pause") : "Webhook à configurer"}${d.last_sent_at ? " · Dernier envoi : " + date(d.last_sent_at) : ""}${d.error ? " · " + escape(d.error) : ""}</p><label class="field"><span>${d.configured ? "Remplacer l’URL du webhook (laisser vide pour la conserver)" : "URL du webhook de ce salon"}</span><input name="webhook" type="password" maxlength="400" autocomplete="new-password" placeholder="https://discord.com/api/webhooks/…" ${d.configured ? "" : "required"}></label><label><input name="enabled" type="checkbox" ${!d.configured || d.enabled ? "checked" : ""}> Activer les annonces de cette matière</label><label><input name="notify_new" type="checkbox" ${d.notify_new !== false ? "checked" : ""}> Annoncer les nouveaux fichiers</label><label><input name="notify_updates" type="checkbox" ${d.notify_updates !== false ? "checked" : ""}> Annoncer les mises à jour de fichiers</label><label class="field"><span>Identifiant du rôle à mentionner (facultatif)</span><input name="role_id" type="text" inputmode="numeric" pattern="[0-9]{17,20}" maxlength="20" value="${escape(d.role_id || "")}" placeholder="123456789012345678"></label><p class="help">Active le mode développeur dans Discord, puis copie l’identifiant du rôle. Le rôle doit être autorisé à recevoir des mentions. Laisse vide pour ne mentionner personne ; le test utilise aussi ce rôle.</p><label><input name="notify_existing" type="checkbox" ${d.notify_existing ? "checked" : ""} ${d.configured ? "disabled" : ""}> Annoncer aussi les documents déjà présents au premier enregistrement</label><p class="help">Désactivé par défaut. Ce choix annonce le catalogue actuel ou le premier catalogue reçu, sans rejouer les fichiers déjà annoncés.</p><div class="document-discord-actions"><button class="secondary" type="submit">Enregistrer</button><button class="secondary" type="button" data-discord-test ${d.configured ? "" : "disabled"}>Envoyer un test</button><button class="secondary" type="button" data-discord-test-latest ${d.configured ? "" : "disabled"}>Tester avec le dernier fichier</button>${d.configured ? '<button class="secondary" type="button" data-discord-remove>Supprimer le webhook</button>' : ""}</div><p role="status"></p></form>`).join("")}</div>
       <button type="button" class="secondary" id="documentRefreshAdmin">Actualiser l’état</button>`;
     $("#documentPasswordForm").onsubmit = async (event) => {
       event.preventDefault();
@@ -364,8 +364,13 @@ export async function renderDocumentsAdmin() {
           status.textContent = error.message;
         } finally {
           buttons.forEach((b, i) => (b.disabled = previous[i]));
-          if (succeeded)
-            form.querySelector("[data-discord-test]").disabled = payload.remove === true;
+          if (succeeded) {
+            for (const test of form.querySelectorAll(
+              "[data-discord-test], [data-discord-test-latest]",
+            ))
+              test.disabled = payload.remove === true;
+            form.elements.notify_existing.disabled = payload.remove !== true;
+          }
         }
       };
       form.onsubmit = (event) => {
@@ -376,8 +381,12 @@ export async function renderDocumentsAdmin() {
             id: form.dataset.documentDiscord,
             webhook: form.elements.webhook.value,
             enabled: form.elements.enabled.checked,
+            notify_new: form.elements.notify_new.checked,
+            notify_updates: form.elements.notify_updates.checked,
+            notify_existing: form.elements.notify_existing.checked,
+            role_id: form.elements.role_id.value,
           },
-          "Webhook enregistré. Les prochaines nouveautés seront annoncées si les annonces sont activées.",
+          "Webhook enregistré. Les réglages d’annonces sont appliqués à cette matière.",
         );
       };
       form.querySelector("[data-discord-test]").onclick = () =>
@@ -385,6 +394,12 @@ export async function renderDocumentsAdmin() {
           "/api/admin/documents/discord/test",
           { id: form.dataset.documentDiscord },
           "Message de test envoyé dans le salon.",
+        );
+      form.querySelector("[data-discord-test-latest]").onclick = () =>
+        action(
+          "/api/admin/documents/discord/test",
+          { id: form.dataset.documentDiscord, latest: true },
+          "Message de test du dernier fichier envoyé dans le salon.",
         );
       const remove = form.querySelector("[data-discord-remove]");
       if (remove)
