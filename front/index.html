@@ -17,7 +17,6 @@
 
     <link rel="stylesheet" href="./style.css" />
     <link rel="stylesheet" href="./appearance.css" />
-    <link rel="stylesheet" href="./documents.css" />
   </head>
   <body>
     <div class="season-scene" aria-hidden="true"></div>
@@ -29,7 +28,14 @@
         Collo <small>MP2I · S1</small>
       </div>
       <div class="top-actions">
-        <button class="ghost" id="documentsOpen" type="button">Documents</button>
+        <a
+          class="ghost"
+          id="documentsOpen"
+          href="https://prepa-sync.knsr-family.com/documents"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Documents</a
+        >
         <button
           class="ghost"
           id="notificationsOpen"
@@ -145,7 +151,6 @@
           <button class="admin-tab active" data-admin-tab="slots" type="button">Créneaux</button>
           <button class="admin-tab" data-admin-tab="weeks" type="button">Semaines</button>
           <button class="admin-tab" data-admin-tab="appearance" type="button">Apparence</button>
-          <button class="admin-tab" data-admin-tab="documents" type="button">Documents</button>
         </div>
 
         <div class="admin-panel" id="slotsPanel">
@@ -170,7 +175,6 @@
         </div>
 
         <div class="admin-panel hidden" id="appearancePanel"></div>
-        <div class="admin-panel hidden" id="documentsAdminPanel"></div>
         <p class="form-error save-error" id="saveError" role="alert"></p>
         <div class="admin-footer">
           <button class="secondary" data-admin-close type="button">Annuler</button>
@@ -268,78 +272,7 @@
         </p>
       </div>
     </dialog>
-    <dialog id="documentsDialog" class="documents-dialog" aria-labelledby="documentsTitle">
-      <header class="documents-head">
-        <div>
-          <div class="eyebrow">HX1 · Espace de classe</div>
-          <h2 id="documentsTitle">Tous tes documents.</h2>
-        </div>
-        <button
-          type="button"
-          class="close-button inline"
-          id="documentsClose"
-          aria-label="Fermer Documents"
-        >
-          ×
-        </button>
-      </header>
-      <section class="document-login" id="documentsLogin">
-        <h3>Entre dans l’espace de la classe.</h3>
-        <p>
-          Les fichiers de maths, de physique et d’anglais, réunis au même endroit. Utilise le mot de
-          passe communiqué par l’administrateur de HX1.
-        </p>
-        <form id="documentLoginForm">
-          <label class="field"
-            ><span>Mot de passe de classe</span
-            ><input
-              id="documentPassword"
-              type="password"
-              maxlength="200"
-              autocomplete="current-password"
-              required
-          /></label>
-          <p id="documentLoginError" class="form-error" role="alert"></p>
-          <button type="submit" class="primary" id="documentLoginButton">
-            Accéder aux documents
-          </button>
-        </form>
-        <p class="help">
-          La session dure jusqu’à sept jours sur cet appareil. Les plateformes d’origine conservent
-          leurs propres permissions.
-        </p>
-      </section>
-      <section class="documents-library" id="documentsLibrary" hidden>
-        <div class="document-tools">
-          <label class="search"
-            ><span class="sr-only">Rechercher un fichier</span
-            ><input
-              id="documentSearch"
-              type="search"
-              maxlength="120"
-              placeholder="Rechercher un fichier ou un chapitre…" /></label
-          ><button class="secondary" type="button" id="documentLogout">Déconnexion</button>
-        </div>
-        <div id="documentSubjects" aria-label="Matières"></div>
-        <div class="document-source-state">
-          <span id="documentSourceState" role="status"></span
-          ><a id="documentOriginalSource" href="#" target="_blank" rel="noopener noreferrer" hidden
-            >Ouvrir la source ↗</a
-          >
-        </div>
-        <nav
-          id="documentBreadcrumbs"
-          class="document-breadcrumbs"
-          aria-label="Dossier courant"
-        ></nav>
-        <div id="documentsItems" class="document-list" aria-live="polite"></div>
-        <div class="document-pagination">
-          <button id="documentPrevious" class="secondary" type="button">Précédent</button
-          ><span id="documentPageInfo"></span
-          ><button id="documentNext" class="secondary" type="button">Suivant</button>
-        </div>
-      </section>
-    </dialog>
+
     <script src="./config.js"></script>
     <nav class="mobile-nav" aria-label="Navigation principale">
       <button type="button" id="mobilePlanning">
@@ -348,13 +281,18 @@
           <path d="M7 3v4m10-4v4M3 11h18m-13 5h2m4 0h2" /></svg
         >Planning
       </button>
-      <button type="button" id="mobileDocuments">
+      <a
+        id="mobileDocuments"
+        href="https://prepa-sync.knsr-family.com/documents"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path
             d="M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
           /></svg
         >Documents
-      </button>
+      </a>
       <button type="button" id="mobileReminders">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg

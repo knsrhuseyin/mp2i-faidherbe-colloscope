@@ -971,3 +971,32 @@ button:disabled {
     gap: 6px;
   }
 }
+
+/* The independent course catalogue opens in Prépa Sync. */
+.top-actions a.ghost {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+.mobile-nav a {
+  color: inherit;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 14px;
+  font: inherit;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .top-actions > #documentsOpen {
+    display: none;
+  }
+  .mobile-nav a {
+    min-width: 62px;
+  }
+}
