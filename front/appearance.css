@@ -460,7 +460,8 @@ body {
     border-top: 1px solid var(--line);
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
   }
-  .mobile-nav button {
+  .mobile-nav button,
+  .mobile-nav a {
     border: 0;
     background: transparent;
     color: var(--muted);

@@ -1,9 +1,7 @@
 /**
  * Point d’entrée du Worker : CORS, connexion admin, lecture/sauvegarde du planning et cron.
- * Il délègue les Documents et les rappels aux modules spécialisés.
+ * Le synchroniseur Prépa Sync est un projet indépendant ; seuls les rappels de colles restent ici.
  */
-import { dispatchDocumentAnnouncements } from "./document-discord.js";
-import { documentRoute } from "./documents.js";
 import { pushRoute, dispatchReminders } from "./notifications.js";
 import { normaliseAppearance } from "../../front/theme-core.mjs";
 import DEFAULT_DATA from "./default-data.js";
@@ -304,9 +302,15 @@ async function handle(request, env) {
     url.pathname.startsWith("/api/documents/") ||
     url.pathname.startsWith("/api/admin/documents")
   ) {
-    const result = await documentRoute(request, env, await tokenIsValid(request, env));
-    const { status = 200, ...body } = result;
-    return json(request, env, body, status);
+    return json(
+      request,
+      env,
+      {
+        error: "Les documents et les réglages de synchronisation sont désormais dans Prépa Sync.",
+        dashboard_url: "https://prepa-sync.knsr-family.com/documents",
+      },
+      410,
+    );
   }
   if (url.pathname.startsWith("/api/push/")) {
     const result = await pushRoute(request, env, (await readCurrentData(env)).data);
@@ -392,11 +396,6 @@ async function handle(request, env) {
 
 export default {
   async scheduled(controller, env, ctx) {
-    ctx.waitUntil(
-      dispatchDocumentAnnouncements(env, controller.scheduledTime).catch(() =>
-        console.error("Synchronisation Discord Documents indisponible."),
-      ),
-    );
     ctx.waitUntil(
       readCurrentData(env).then(({ data }) =>
         dispatchReminders(env, data, controller.scheduledTime),

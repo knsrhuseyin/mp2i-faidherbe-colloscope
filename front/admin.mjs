@@ -12,7 +12,6 @@ import {
   normaliseImportedData,
 } from "./planning-model.mjs";
 import { renderAppearanceEditor, normaliseAppearance } from "./appearance.js";
-import { renderDocumentsAdmin } from "./documents.js";
 
 /** Branche les formulaires sur l’état public fourni par app.js, sans partager son objet de données modifiable. */
 export function initAdmin({ getData, getUpdatedAt, onSaved }) {
@@ -37,7 +36,6 @@ export function initAdmin({ getData, getUpdatedAt, onSaved }) {
     renderSlotList();
     renderWeekEditor();
     renderAppearanceEditor(adminDraft.appearance);
-    renderDocumentsAdmin();
   }
 
   async function openAdmin() {
@@ -241,8 +239,6 @@ export function initAdmin({ getData, getUpdatedAt, onSaved }) {
       $("#slotsPanel").classList.toggle("hidden", button.dataset.adminTab !== "slots");
       $("#weeksPanel").classList.toggle("hidden", button.dataset.adminTab !== "weeks");
       $("#appearancePanel").classList.toggle("hidden", button.dataset.adminTab !== "appearance");
-      $("#documentsAdminPanel").classList.toggle("hidden", button.dataset.adminTab !== "documents");
-      $("#saveAdmin").hidden = button.dataset.adminTab === "documents";
     }),
   );
   $("#jsonFile").addEventListener("change", async (event) => {
