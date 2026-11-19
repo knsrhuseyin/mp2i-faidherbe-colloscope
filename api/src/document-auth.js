@@ -111,13 +111,76 @@ export async function changeDocumentPassword(env, password) {
 let githubKeys = null,
   keysUntil = 0;
 /** Vérifie la signature GitHub et les droits exacts : dépôt, audience, branche et workflow autorisés. */
-export async function collectorSession(request) {
+export async function localCollectorSession(request, env) {
+  if (!env?.LOCAL_COLLECTOR_SECRET) return false;
+  const path = new URL(request.url).pathname;
+  if (
+    ![
+      "/api/documents/collector-config",
+      "/api/documents/ingest",
+      "/api/documents/collector-error",
+    ].includes(path)
+  )
+    return false;
+  const token = (request.headers.get("authorization") || "").replace(/^Bearer /, "");
+  const [kind, expiry, bodyHash, signature, extra] = token.split(".");
+  if (
+    kind !== "local" ||
+    extra ||
+    !/^\d{10}$/.test(expiry || "") ||
+    !/^[a-f0-9]{64}$/.test(bodyHash || "") ||
+    !/^[A-Za-z0-9_-]{43}$/.test(signature || "")
+  )
+    return false;
+  const now = Math.floor(Date.now() / 1000);
+  if (Number(expiry) <= now || Number(expiry) > now + 120) return false;
+  const reader = request.clone().body?.getReader();
+  const chunks = [];
+  let size = 0;
+  if (reader) {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > 2_000_000) {
+        await Promise.all([reader.cancel(), request.body?.cancel()]);
+        return false;
+      }
+      chunks.push(value);
+    }
+  }
+  const body = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.length;
+  }
+  const digest = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", body)), (b) =>
+    b.toString(16).padStart(2, "0"),
+  ).join("");
+  if (!equal(digest, bodyHash)) return false;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(env.LOCAL_COLLECTOR_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["verify"],
+  );
+  return crypto.subtle.verify(
+    "HMAC",
+    key,
+    decode(signature),
+    enc.encode([request.method, path, expiry, bodyHash].join("\n")),
+  );
+}
+export async function collectorSession(request, env = {}) {
   const reject = (reason) => {
     console.warn("Documents collector auth: " + reason);
     return false;
   };
   try {
     const token = (request.headers.get("authorization") || "").replace(/^Bearer /, "");
+    if (token.startsWith("local.")) return await localCollectorSession(request, env);
     if (token.length > 16000) return reject("size");
     const [h, p, s, extra] = token.split(".");
     if (extra || !h || !p || !s) return reject("format");
@@ -143,12 +206,14 @@ export async function collectorSession(request) {
       branch: claims.ref === "refs/heads/main",
     };
     for (const [reason, valid] of Object.entries(checks)) if (!valid) return reject(reason);
-    if (!githubKeys || keysUntil < Date.now()) {
+    if (!githubKeys || keysUntil < Date.now() || !githubKeys.some((k) => k.kid === header.kid)) {
       const response = await fetch("https://token.actions.githubusercontent.com/.well-known/jwks", {
         signal: AbortSignal.timeout(10000),
       });
       if (!response.ok) return reject("keys_http_" + response.status);
-      githubKeys = (await response.json()).keys;
+      const keys = (await response.json()).keys;
+      if (!Array.isArray(keys) || !keys.length) return reject("keys_invalid");
+      githubKeys = keys;
       keysUntil = Date.now() + 300000;
     }
     const jwk = githubKeys.find((k) => k.kid === header.kid);

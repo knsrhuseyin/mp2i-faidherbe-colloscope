@@ -370,10 +370,20 @@ export async function documentRoute(request, env, admin = false) {
       "/api/documents/collector-error",
     ].includes(path)
   ) {
-    if (!(await collectorSession(request)))
+    if (!(await collectorSession(request, env)))
       return { status: 401, error: "Collecteur non autorisé." };
     if (path.endsWith("collector-config") && method === "GET")
-      return { sources: await sources(env, true), discord: await discordSettings(env) };
+      return {
+        sources: await sources(env, true),
+        discord: await discordSettings(env),
+        recent_announcements: (
+          await env.DB.prepare(
+            `SELECT source_id,item_id,state,created_at FROM document_announcements
+          UNION ALL SELECT source_id,item_id,state,created_at FROM document_change_announcements
+          ORDER BY created_at DESC LIMIT 200`,
+          ).all()
+        ).results,
+      };
     if (path.endsWith("/ingest") && method === "POST") return ingest(env, await body(request));
     if (path.endsWith("collector-error") && method === "POST") {
       const input = await body(request);
