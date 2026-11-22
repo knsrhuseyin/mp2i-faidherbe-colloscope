@@ -58,3 +58,5 @@ Les trois contrôles s’exécutent sur chaque pull request et push sur main.
 ## Garder les sources lisibles
 
 `npm run format` remet les sources JavaScript, HTML et CSS en forme avec la configuration `.prettierrc.json` de la racine. `npm run format:check` vérifie ce format sans écrire. Les en-têtes de modules donnent leur rôle et les commentaires détaillent les contraintes importantes ; le guide de lecture explique les relations entre fichiers.
+
+La clé élève est désormais validée à chaque ouverture par Prépa Sync, via le point de lecture fixe. Elle se gère dans les paramètres privés de Prépa Sync (`/parametres/acces-collo`) : affichage sur demande, copie, invitation et remplacement immédiat. Le proxy utilise seulement `PREPA_SYNC_SITE_TOKEN` côté serveur ; le secret historique `PREPA_SYNC_DOCUMENTS_KEY` est ignoré. Aucun jeton d’administration n’est remis aux élèves. Une clé révoquée retourne 401 et doit être remplacée sur l’appareil.
