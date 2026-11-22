@@ -237,14 +237,14 @@ test("editing retains its base version and preserves the draft on conflict", asy
   expect(errors).toEqual([]);
 });
 
-test("course links open the independent dashboard and admin has no webhook settings", async ({
+test("document buttons target the private library and admin has no webhook settings", async ({
   page,
 }) => {
   await mount(page);
   for (const id of ["#documentsOpen", "#mobileDocuments"]) {
     await expect(page.locator(id)).toHaveAttribute(
-      "href",
-      "https://prepa-sync.knsr-family.com/documents",
+      "aria-controls",
+      "documentsPanel",
     );
   }
   await expect(page.locator('[data-admin-tab="documents"]')).toHaveCount(0);
