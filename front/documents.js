@@ -1,3 +1,4 @@
+import { currentPage } from "./navigation.js";
 import { createApiClient } from "./api-client.mjs";
 const STORAGE = "collo-prepa-sync-read-key-v1",
   labels = { maths: "Mathématiques", physics: "Physique", english: "Anglais" };
@@ -9,11 +10,6 @@ let key = "",
   controller = null,
   epoch = 0,
   active = false;
-const planning = [
-  ...document.querySelectorAll(
-    "main > .page-intro,main > .summary,main > #planning,main > .update-note",
-  ),
-];
 try {
   key = localStorage.getItem(STORAGE) || "";
 } catch {}
@@ -30,10 +26,7 @@ function status(value, error = false) {
 }
 function toggle(open) {
   active = open;
-  panel.hidden = !open;
-  planning.forEach((node) => (node.hidden = open));
-  $("documentsOpen").setAttribute("aria-expanded", String(open));
-  $("mobileDocuments").setAttribute("aria-expanded", String(open));
+
   if (!open) {
     controller?.abort();
     epoch++;
@@ -41,7 +34,6 @@ function toggle(open) {
     $("documentsRefresh").disabled = false;
     $("documentsUnlock").disabled = false;
   }
-  window.scrollTo({ top: 0, behavior: "instant" });
 }
 function link(url, label) {
   try {
@@ -218,13 +210,10 @@ function open() {
   if (rows.length) render();
   if (key) load();
 }
-$("documentsOpen").addEventListener("click", open);
-$("mobileDocuments").addEventListener("click", open);
-$("documentsBack").onclick = () => {
-  toggle(false);
-  history.replaceState(null, "", location.pathname + location.search);
-};
-$("mobilePlanning").addEventListener("click", () => toggle(false), true);
+window.addEventListener("collo-page-change", (event) => {
+  if (event.detail.page === "documents") open();
+  else toggle(false);
+});
 $("documentsKeyForm").onsubmit = (event) => {
   event.preventDefault();
   load($("documentsKey").value.trim());
@@ -260,4 +249,4 @@ if (supplied !== null) {
   toggle(true);
   if (/^[A-Za-z0-9_-]{43,128}$/.test(supplied)) load(supplied);
   else status("Le lien d’accès est invalide. Rouvre les documents depuis Prépa Sync.", true);
-} else if (location.hash === "#documents") open();
+} else if (currentPage() === "documents") open();

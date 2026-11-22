@@ -2,6 +2,8 @@
  * Planning public : charge les données, mémorise le groupe et orchestre le rendu.
  * Les formulaires d’administration et le calcul des colles vivent dans leurs propres modules.
  */
+import "./navigation.js";
+import { updateGroupPicker, openGroupPicker, syncGroupLabel } from "./group-picker.js";
 import { api } from "./api-client.mjs";
 import { $, escapeHtml, setHtml, setText, renderRows } from "./dom.mjs";
 import { initAdmin } from "./admin.mjs";
@@ -32,6 +34,7 @@ let renderedGroup = null;
 /** Actualise les contrôles après une action ou de nouvelles données ; le timer utilise renderTemporal. */
 function render({ centerWeek = false } = {}) {
   if (!data || !selectedGroup()) return;
+  syncGroupLabel();
   if (selectedGroup() !== renderedGroup) {
     renderedGroup = selectedGroup();
     window.dispatchEvent(new Event("collo-group-change"));
@@ -210,15 +213,9 @@ function populateGroups() {
       .map((group) => `<option value="${group.id}">${escapeHtml(group.label)}</option>`)
       .join(""),
   );
-  setHtml(
-    $("#welcomeGroup"),
-    '<option value="" selected disabled>Choisir un groupe</option>' +
-      data.groups
-        .map((group) => `<option value="${group.id}">${escapeHtml(group.label)}</option>`)
-        .join(""),
-  );
   if (data.groups.some((group) => String(group.id) === String(selected)))
     $("#groupSelect").value = selected;
+  updateGroupPicker(data.groups);
 }
 
 function initGroupChoice() {
@@ -227,8 +224,7 @@ function initGroupChoice() {
     $("#groupSelect").value = String(saved);
     render({ centerWeek: true });
   } else {
-    $("#groupDialog").showModal();
-    $("#welcomeGroup").focus();
+    openGroupPicker(true);
   }
 }
 
@@ -269,16 +265,6 @@ $("#weekStrip").addEventListener("click", (event) => {
 
 $("#groupSelect").addEventListener("change", () => {
   localStorage.setItem(GROUP_KEY, $("#groupSelect").value);
-  activeWeek = currentWeek;
-  render({ centerWeek: true });
-});
-$("#groupDialog").addEventListener("cancel", (event) => event.preventDefault());
-$("#confirmGroup").addEventListener("click", () => {
-  const group = $("#welcomeGroup").value;
-  if (!group) return $("#welcomeGroup").focus();
-  $("#groupSelect").value = group;
-  localStorage.setItem(GROUP_KEY, group);
-  $("#groupDialog").close();
   activeWeek = currentWeek;
   render({ centerWeek: true });
 });
@@ -403,17 +389,6 @@ document.addEventListener("visibilitychange", () => {
   tickPlanning();
   refreshPlanning();
 });
-$("#mobilePlanning").onclick = () => $("#planning").scrollIntoView({ behavior: "smooth" });
-$("#mobileReminders").onclick = () => $("#notificationsOpen").click();
-$("#mobileGroup").onclick = () => {
-  window.scrollTo({ top: 0, behavior: "smooth" });
-  $("#groupSelect").focus();
-  try {
-    $("#groupSelect").showPicker();
-  } catch {
-    $("#groupSelect").click();
-  }
-};
 
 initAdmin({
   getData: () => data,

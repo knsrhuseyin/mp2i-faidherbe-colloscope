@@ -472,7 +472,7 @@ body {
     min-height: 46px;
     font-size: 0.7rem;
   }
-  .mobile-nav button:first-child {
+  .mobile-nav button[aria-current="page"] {
     color: var(--ink);
     font-weight: 800;
   }
@@ -659,7 +659,7 @@ html[data-season="christmas"] .mobile-nav {
   border-top-color: #e5c38255;
   backdrop-filter: blur(16px);
 }
-html[data-season="christmas"] .mobile-nav button:first-child {
+html[data-season="christmas"] .mobile-nav button[aria-current="page"] {
   color: #e5c382;
 }
 html[data-season="christmas"] .update-note {

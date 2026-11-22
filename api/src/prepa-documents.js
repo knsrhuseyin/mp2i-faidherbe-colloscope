@@ -35,7 +35,7 @@ export async function prepaDocuments(request, env, fetchImpl = fetch) {
   if (!env.PREPA_SYNC_SITE_TOKEN)
     return { status: 503, error: "La connexion à Prépa Sync est en préparation." };
   const token = (request.headers.get("authorization") || "").replace(/^Bearer /, "");
-  if (! /^[A-Za-z0-9_-]{43,128}$/.test(token))
+  if (!/^[A-Za-z0-9_-]{43,128}$/.test(token))
     return { status: 401, error: "Clé d’accès aux documents requise ou invalide." };
   const controller = new AbortController(),
     timer = setTimeout(() => controller.abort(), 12000);
