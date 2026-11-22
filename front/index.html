@@ -121,6 +121,32 @@
         </form>
         <p id="documentsStatus" class="documents-status" role="status" aria-live="polite"></p>
         <div id="documentsLibrary" hidden>
+          <div class="documents-tabs" role="tablist" aria-label="Vue des documents">
+            <button
+              id="documentsFoldersTab"
+              type="button"
+              role="tab"
+              data-document-view="folders"
+              aria-selected="true"
+              aria-controls="documentsList"
+            >
+              Par dossier
+            </button>
+            <button
+              id="documentsRecentTab"
+              type="button"
+              role="tab"
+              data-document-view="recent"
+              aria-selected="false"
+              aria-controls="documentsList"
+              tabindex="-1"
+            >
+              Ajouts récents
+            </button>
+          </div>
+          <p id="documentsViewHelp" class="documents-view-help" hidden>
+            Les plus récents d’abord, selon la date de publication ou de première détection.
+          </p>
           <div class="documents-toolbar">
             <label
               >Rechercher<input
@@ -149,7 +175,12 @@
               </button>
             </div>
           </div>
-          <div id="documentsList"></div>
+          <div
+            id="documentsList"
+            role="tabpanel"
+            aria-labelledby="documentsFoldersTab"
+            tabindex="0"
+          ></div>
         </div>
       </section>
 
