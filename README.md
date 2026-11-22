@@ -194,3 +194,19 @@ Les documents et leurs réglages sont désormais dans [Prépa Sync](https://prep
 Collo gère uniquement le planning, son apparence et les rappels de colles. Il ne stocke plus de webhook Discord actif, ne collecte plus les cours et n’envoie plus leurs annonces. Les anciennes routes `/api/documents/*` et `/api/admin/documents/*` répondent HTTP 410 avec le lien du tableau de bord.
 
 Les anciennes migrations SQL restent présentes pour préserver l’historique des déploiements. Le transfert contrôlé des réglages et des annonces a été réalisé une seule fois ; `api/scripts/sync-migration.js` est un outil de transition qui ne constitue pas l’entrée de production.
+
+## Documents privés via Prépa Sync
+
+Le bouton Documents ouvre une bibliothèque intégrée à Collo : recherche, matière,
+dossier et liens Source/Drive. La synchronisation et Discord restent indépendants.
+La bibliothèque requiert une clé de lecture dédiée. Depuis l’espace privé Prépa
+Sync, le bouton d’ouverture prépare l’accès sur cet appareil ; il est également
+possible de saisir la clé manuellement. Elle est mémorisée après validation et
+peut être effacée avec « Oublier l’accès ». Le catalogue n’est pas stocké hors ligne.
+
+Le Worker Collo expose uniquement `GET /api/documents/access` et
+`GET /api/documents/catalogue`. Les secrets `PREPA_SYNC_DOCUMENTS_KEY` et
+`PREPA_SYNC_SITE_TOKEN` restent côté serveur. L’URL amont est fixe et pointe vers
+l’API de lecture Prépa Sync ; ni les réglages ni les commandes ne sont relayés.
+La clé locale de référence est protégée sur la VM 103, hors Git. Les liens
+anciens vers Prépa Sync restent utilisables pour administrer la synchronisation.

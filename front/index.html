@@ -17,6 +17,7 @@
 
     <link rel="stylesheet" href="./style.css" />
     <link rel="stylesheet" href="./appearance.css" />
+    <link rel="stylesheet" href="./documents.css" />
   </head>
   <body>
     <div class="season-scene" aria-hidden="true"></div>
@@ -28,14 +29,7 @@
         Collo <small>MP2I · S1</small>
       </div>
       <div class="top-actions">
-        <a
-          class="ghost"
-          id="documentsOpen"
-          href="https://prepa-sync.knsr-family.com/documents"
-          target="_blank"
-          rel="noopener noreferrer"
-          >Documents</a
-        >
+        <button class="ghost" id="documentsOpen" type="button" aria-controls="documentsPanel">Documents</button>
         <button
           class="ghost"
           id="notificationsOpen"
@@ -55,6 +49,22 @@
     </header>
 
     <main>
+      <section id="documentsPanel" class="documents-panel" aria-labelledby="documentsTitle" hidden>
+        <div class="documents-heading"><div><span class="eyebrow">Bibliothèque privée</span><h1 id="documentsTitle">Tes documents de prépa.</h1><p>Mathématiques, physique et anglais · Catalogue Prépa Sync</p></div><button id="documentsBack" class="ghost" type="button">Retour au planning</button></div>
+        <form id="documentsKeyForm" class="documents-key">
+          <h2>Ouvrir cet espace privé</h2><p>La clé d’accès peut être mémorisée sur cet appareil. Les documents ne sont pas enregistrés hors ligne.</p>
+          <label for="documentsKey">Clé d’accès</label><input id="documentsKey" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required maxlength="200" placeholder="Ta clé privée Prépa Sync">
+          <button class="primary" id="documentsUnlock" type="submit">Déverrouiller les documents</button>
+          <p class="documents-help">Depuis <a href="https://prepa-sync.knsr-family.com/documents" target="_blank" rel="noopener noreferrer">ton espace Prépa Sync</a>, le bouton « Ouvrir les documents dans Collo » prépare l’accès sur cet appareil.</p>
+        </form>
+        <p id="documentsStatus" class="documents-status" role="status" aria-live="polite"></p>
+        <div id="documentsLibrary" hidden>
+          <div class="documents-toolbar"><label>Rechercher<input id="documentsSearch" type="search" placeholder="Nom du fichier ou dossier…"></label><label>Matière<select id="documentsSubject"><option value="all">Toutes les matières</option><option value="maths">Mathématiques</option><option value="physics">Physique</option><option value="english">Anglais</option></select></label><label>Dossier<select id="documentsFolder"><option value="all">Tous les dossiers</option></select></label></div>
+          <div class="documents-actions"><span id="documentsCount"></span><div><button class="ghost" id="documentsRefresh" type="button">Actualiser</button><button class="ghost" id="documentsForget" type="button">Oublier l’accès sur cet appareil</button></div></div>
+          <div id="documentsList"></div>
+        </div>
+      </section>
+
       <div class="notice hidden" id="siteNotice" role="status"></div>
       <div class="page-intro">
         <span class="eyebrow">Ton colloscope · MP2I</span>
@@ -281,18 +291,7 @@
           <path d="M7 3v4m10-4v4M3 11h18m-13 5h2m4 0h2" /></svg
         >Planning
       </button>
-      <a
-        id="mobileDocuments"
-        href="https://prepa-sync.knsr-family.com/documents"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            d="M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
-          /></svg
-        >Documents
-      </a>
+      <button type="button" id="mobileDocuments" aria-controls="documentsPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Documents</button>
       <button type="button" id="mobileReminders">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg
@@ -307,5 +306,6 @@
     </nav>
     <script type="module" src="./app.js"></script>
     <script type="module" src="./notifications.js"></script>
+    <script type="module" src="./documents.js"></script>
   </body>
 </html>
