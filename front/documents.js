@@ -9,7 +9,8 @@ let key = "",
   loading = false,
   controller = null,
   epoch = 0,
-  active = false;
+  active = false,
+  view = "folders";
 try {
   key = localStorage.getItem(STORAGE) || "";
 } catch {}
@@ -104,12 +105,26 @@ function render() {
     return;
   }
   const groups = new Map();
-  for (const row of filtered.sort(
-    (a, b) =>
-      (a.path || "").localeCompare(b.path || "", "fr") ||
-      a.name.localeCompare(b.name, "fr", { numeric: true }),
-  )) {
-    const group = labels[row.subject] + " · " + (row.path || "Racine");
+  const ordered = filtered.sort(
+    view === "recent"
+      ? (a, b) =>
+          (documentDate(b)?.stamp ?? -Infinity) - (documentDate(a)?.stamp ?? -Infinity) ||
+          a.name.localeCompare(b.name, "fr", { numeric: true })
+      : (a, b) =>
+          (a.path || "").localeCompare(b.path || "", "fr") ||
+          a.name.localeCompare(b.name, "fr", { numeric: true }),
+  );
+  for (const row of ordered) {
+    const date = documentDate(row);
+    const group =
+      view === "recent"
+        ? date
+          ? new Intl.DateTimeFormat("fr-FR", {
+              timeZone: "Europe/Paris",
+              dateStyle: "long",
+            }).format(date.stamp)
+          : "Date non disponible"
+        : labels[row.subject] + " · " + (row.path || "Racine");
     if (!groups.has(group)) groups.set(group, []);
     groups.get(group).push(row);
   }
@@ -117,32 +132,89 @@ function render() {
     const section = text("section", "", "documents-folder");
     section.append(text("h2", name));
     const ul = document.createElement("ul");
-    for (const row of items) {
-      const li = text("li", "", "documents-file"),
-        details = document.createElement("div");
-      details.append(text("strong", row.name));
-      let detail = labels[row.subject];
-      if (row.size !== null && Number.isFinite(row.size))
-        detail +=
-          " · " +
-          new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(row.size / 1024) +
-          " Ko";
-      details.append(text("small", detail));
-      const links = text("div", "", "documents-links");
-      for (const [url, label] of [
-        [row.source_url, "Source"],
-        [row.drive_url, "Drive"],
-      ]) {
-        const a = link(url, label);
-        if (a) links.append(a);
-      }
-      li.append(details, links);
-      ul.append(li);
-    }
+    for (const row of items) ul.append(documentRow(row));
     section.append(ul);
     list.append(section);
   }
 }
+function documentDate(row) {
+  for (const [value, label] of [
+    [row.published_at, "Publié"],
+    [row.detected_at, "Repéré"],
+  ]) {
+    const stamp = Date.parse(value || "");
+    if (Number.isFinite(stamp)) return { stamp, label };
+  }
+  return null;
+}
+function documentRow(row) {
+  const li = text("li", "", "documents-file"),
+    details = document.createElement("div");
+  details.append(text("strong", row.name));
+  let detail = labels[row.subject];
+  if (row.size !== null && Number.isFinite(row.size))
+    detail +=
+      " · " +
+      new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(row.size / 1024) +
+      " Ko";
+  details.append(text("small", detail));
+  if (view === "recent") {
+    details.append(text("small", row.path || "Racine", "documents-location"));
+    const date = documentDate(row);
+    if (date) {
+      const time = text(
+        "time",
+        date.label +
+          " le " +
+          new Intl.DateTimeFormat("fr-FR", {
+            timeZone: "Europe/Paris",
+            dateStyle: "medium",
+            timeStyle: "short",
+          }).format(date.stamp),
+      );
+      time.dateTime = new Date(date.stamp).toISOString();
+      details.append(time);
+    }
+  }
+  const links = text("div", "", "documents-links");
+  for (const [url, label] of [
+    [row.source_url, "Source"],
+    [row.drive_url, "Drive"],
+  ]) {
+    const a = link(url, label);
+    if (a) links.append(a);
+  }
+  li.append(details, links);
+  return li;
+}
+function selectView(value) {
+  view = value;
+  document.querySelectorAll("[data-document-view]").forEach((button) => {
+    const selected = button.dataset.documentView === view;
+    button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+    if (selected) $("documentsList").setAttribute("aria-labelledby", button.id);
+  });
+  $("documentsViewHelp").hidden = view !== "recent";
+  render();
+}
+const viewTabs = [...document.querySelectorAll("[data-document-view]")];
+for (const button of viewTabs) {
+  button.addEventListener("click", () => selectView(button.dataset.documentView));
+  button.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const next =
+      event.key === "Home"
+        ? viewTabs[0]
+        : event.key === "End"
+          ? viewTabs.at(-1)
+          : viewTabs[(viewTabs.indexOf(button) + 1) % viewTabs.length];
+    selectView(next.dataset.documentView);
+    next.focus();
+  });
+}
+
 async function load(candidate = key) {
   if (loading || !candidate) return;
   loading = true;

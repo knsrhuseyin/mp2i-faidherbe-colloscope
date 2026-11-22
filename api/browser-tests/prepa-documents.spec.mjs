@@ -20,7 +20,7 @@ const documents = [
     source_url: "https://drive.google.com/file/d/EnglishFile123/view",
   },
 ];
-async function mount(page, hash = "") {
+async function mount(page, hash = "", items = documents) {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.addInitScript(() => localStorage.setItem("collo-group-v2", "17"));
@@ -39,7 +39,7 @@ async function mount(page, hash = "") {
               json: {
                 schema: 1,
                 provider: "prepa-sync",
-                documents,
+                documents: items,
                 updated_at: new Date().toISOString(),
               },
             }
@@ -110,4 +110,72 @@ test("private transfer clears the fragment", async ({ page }) => {
   expect(errors).toEqual([]);
   if (test.info().project.name === "mobile")
     await page.screenshot({ path: "/tmp/collo-private-documents-mobile.png", fullPage: true });
+});
+
+test("recent additions sort by publication or detection, retain filters and keyboard tabs", async ({
+  page,
+}) => {
+  const items = [
+    {
+      ...documents[0],
+      published_at: "2026-11-20T08:00:00Z",
+      synced_at: "2026-12-01T10:00:00Z",
+      modified_at: "2026-12-01T10:00:00Z",
+    },
+    { ...documents[1], published_at: "2026-11-21T23:30:00Z", detected_at: "2026-11-20T00:00:00Z" },
+    {
+      id: "physics:c",
+      name: "Physique.pdf",
+      subject: "physics",
+      path: "TD / Électricité",
+      published_at: "invalid",
+      detected_at: "2026-11-22T08:00:00Z",
+      source_url: "https://nuage13.apps.education.fr/test",
+    },
+    {
+      id: "maths:d",
+      name: "Sans date.pdf",
+      subject: "maths",
+      path: "Archives",
+      published_at: null,
+      detected_at: "invalid",
+    },
+  ];
+  const errors = await mount(page, "#documents-key=" + KEY, items);
+  await expect(page.locator(".documents-file")).toHaveCount(4);
+  await page.getByRole("tab", { name: "Ajouts récents" }).click();
+  await expect(page.locator("#documentsRecentTab")).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".documents-file strong")).toHaveText([
+    "Physique.pdf",
+    "English.pdf",
+    "Semaine_8.pdf",
+    "Sans date.pdf",
+  ]);
+  await expect(page.locator(".documents-folder h2")).toHaveText([
+    "22 novembre 2026",
+    "20 novembre 2026",
+    "Date non disponible",
+  ]);
+  await expect(page.locator(".documents-file time")).toHaveCount(3);
+  await expect(page.locator(".documents-file time").first()).toContainText("Repéré");
+  await expect(page.locator(".documents-location").first()).toHaveText("TD / Électricité");
+  await page.locator("#documentsSubject").selectOption("maths");
+  await expect(page.locator(".documents-file")).toHaveCount(2);
+  await page.locator("#documentsSearch").fill("Semaine");
+  await expect(page.locator(".documents-file")).toHaveCount(1);
+  await page.locator("#documentsSearch").fill("absent");
+  await expect(page.locator(".documents-empty")).toBeVisible();
+  await page.locator("#documentsSearch").fill("");
+  await page.locator("#documentsSubject").selectOption("all");
+  await page.locator("#documentsRecentTab").focus();
+  await page.keyboard.press("Home");
+  await expect(page.locator("#documentsFoldersTab")).toBeFocused();
+  await expect(page.locator(".documents-file time")).toHaveCount(0);
+  await page.keyboard.press("End");
+  await expect(page.locator("#documentsRecentTab")).toBeFocused();
+  await expect(page.locator(".documents-file strong").first()).toHaveText("Physique.pdf");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  expect(errors).toEqual([]);
+  if (test.info().project.name === "mobile")
+    await page.screenshot({ path: "/tmp/collo-recent-documents-mobile.png", fullPage: true });
 });
