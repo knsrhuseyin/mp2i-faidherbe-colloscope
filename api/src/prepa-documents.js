@@ -1,26 +1,6 @@
 /** A fixed read-only upstream; browser credentials never become upstream URLs. */
 const UPSTREAM =
   "https://prepa-sync-huseyin.huseyinkenesari20081.chatgpt.site/api/integrations/collo/documents";
-async function sameSecret(value, expected) {
-  if (!value || !expected) return false;
-  const enc = new TextEncoder(),
-    key = await crypto.subtle.importKey(
-      "raw",
-      enc.encode(expected),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"],
-    );
-  const sig = await crypto.subtle.sign("HMAC", key, enc.encode("collo-documents"));
-  const test = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(value),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["verify"],
-  );
-  return crypto.subtle.verify("HMAC", test, sig, enc.encode("collo-documents"));
-}
 async function boundedJson(response) {
   const reader = response.body?.getReader();
   if (!reader) throw new Error("empty");
@@ -52,25 +32,28 @@ export async function prepaDocuments(request, env, fetchImpl = fetch) {
   const path = new URL(request.url).pathname;
   if (!["/api/documents/catalogue", "/api/documents/access"].includes(path)) return null;
   if (request.method !== "GET") return { status: 405, error: "Cet espace est en lecture seule." };
-  if (!env.PREPA_SYNC_DOCUMENTS_KEY || !env.PREPA_SYNC_SITE_TOKEN)
+  if (!env.PREPA_SYNC_SITE_TOKEN)
     return { status: 503, error: "La connexion à Prépa Sync est en préparation." };
   const token = (request.headers.get("authorization") || "").replace(/^Bearer /, "");
-  if (token.length > 200 || !(await sameSecret(token, env.PREPA_SYNC_DOCUMENTS_KEY)))
+  if (! /^[A-Za-z0-9_-]{43,128}$/.test(token))
     return { status: 401, error: "Clé d’accès aux documents requise ou invalide." };
-  if (path.endsWith("/access")) return { authenticated: true };
   const controller = new AbortController(),
     timer = setTimeout(() => controller.abort(), 12000);
   try {
     const response = await fetchImpl(UPSTREAM, {
       method: "GET",
       headers: {
-        Authorization: "Bearer " + env.PREPA_SYNC_DOCUMENTS_KEY,
+        Authorization: "Bearer " + token,
         "OAI-Sites-Authorization": "Bearer " + env.PREPA_SYNC_SITE_TOKEN,
         Accept: "application/json",
       },
       redirect: "manual",
       signal: controller.signal,
     });
+    if (response.status === 401) {
+      await response.body?.cancel();
+      return { status: 401, error: "Clé d’accès aux documents requise ou révoquée." };
+    }
     if (response.status !== 200) {
       await response.body?.cancel();
       return {
@@ -86,6 +69,7 @@ export async function prepaDocuments(request, env, fetchImpl = fetch) {
       data.documents.length > 500
     )
       throw new Error("invalid");
+    if (path.endsWith("/access")) return { authenticated: true };
     return {
       schema: 1,
       provider: "prepa-sync",

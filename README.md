@@ -205,8 +205,9 @@ possible de saisir la clé manuellement. Elle est mémorisée après validation 
 peut être effacée avec « Oublier l’accès ». Le catalogue n’est pas stocké hors ligne.
 
 Le Worker Collo expose uniquement `GET /api/documents/access` et
-`GET /api/documents/catalogue`. Les secrets `PREPA_SYNC_DOCUMENTS_KEY` et
-`PREPA_SYNC_SITE_TOKEN` restent côté serveur. L’URL amont est fixe et pointe vers
+`GET /api/documents/catalogue`. Le secret `PREPA_SYNC_SITE_TOKEN` reste côté serveur. La clé élève est validée
+par Prépa Sync et peut être affichée ou remplacée dans ses paramètres privés.
+Le secret historique `PREPA_SYNC_DOCUMENTS_KEY` n’est plus utilisé. L’URL amont est fixe et pointe vers
 l’API de lecture Prépa Sync ; ni les réglages ni les commandes ne sont relayés.
 La clé locale de référence est protégée sur la VM 103, hors Git. Les liens
 anciens vers Prépa Sync restent utilisables pour administrer la synchronisation.
