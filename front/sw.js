@@ -3,13 +3,16 @@
  * Les appels API et le catalogue privé ne sont jamais ajoutés à ce cache.
  */
 // Cache only the app shell. Never cache API calls or admin responses.
-const CACHE = "collo-shell-v15";
+const CACHE = "collo-shell-v16";
 const SHELL = [
   "./",
   "./index.html",
   "./style.css",
   "./appearance.css",
   "./documents.css",
+  "./navigation.css",
+  "./navigation.js",
+  "./group-picker.js",
   "./documents.js",
   "./app.js",
   "./api-client.mjs",

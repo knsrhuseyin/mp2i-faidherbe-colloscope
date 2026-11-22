@@ -1,0 +1,492 @@
+/* Shared navigation and device settings use the active Collo palette. */
+[hidden] {
+  display: none !important;
+}
+h1[tabindex="-1"]:focus {
+  outline: none;
+}
+.brand-home {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.top-actions [data-page] {
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+.top-actions [aria-current="page"] {
+  background: var(--control);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.group-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--ink);
+  padding: 8px 12px;
+  border-radius: 14px;
+  text-align: left;
+  min-height: 48px;
+}
+.group-trigger:hover {
+  border-color: var(--lime);
+}
+.group-trigger small {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--muted);
+  line-height: 1.3;
+}
+.group-trigger strong {
+  display: block;
+  font-size: 0.94rem;
+  line-height: 1.3;
+}
+.group-trigger svg,
+.group-search svg,
+.reminder-symbol svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.group-trigger-icon {
+  display: grid;
+  place-items: center;
+  color: var(--lime);
+}
+.group-trigger .group-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+.group-picker {
+  width: min(700px, calc(100% - 48px));
+  max-width: none;
+  max-height: min(800px, calc(100dvh - 64px));
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  background: var(--white);
+  color: var(--ink);
+  overflow: auto;
+  box-shadow: 0 30px 100px #0005;
+}
+.group-picker::backdrop {
+  background: #05090daf;
+  backdrop-filter: blur(6px);
+}
+.group-picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 30px 30px 0;
+}
+.group-picker h2 {
+  font-size: clamp(1.65rem, 4vw, 2rem);
+  letter-spacing: -0.05em;
+  line-height: 1.15;
+  margin: 9px 0 0;
+}
+#groupDialogHelp {
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 12px 30px 22px;
+  max-width: 500px;
+}
+.group-search {
+  margin: 0 30px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--control);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0 14px;
+  color: var(--muted);
+}
+.group-search:focus-within {
+  border-color: var(--lime);
+}
+.group-search input {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 0;
+  outline: none;
+}
+.group-search input::placeholder {
+  color: var(--muted);
+}
+.group-picker-scroll {
+  padding: 0 30px 24px;
+}
+.group-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 9px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  min-width: 0;
+}
+.group-choice {
+  display: block;
+  position: relative;
+  min-width: 0;
+}
+.group-choice input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.group-choice > span {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-height: 62px;
+  background: var(--control);
+  font-size: 1.06rem;
+  font-weight: 750;
+  transition: border-color 0.15s;
+}
+.group-choice:hover > span {
+  border-color: var(--lime);
+}
+.group-choice input:checked + span {
+  background: var(--lime);
+  color: var(--accent-ink);
+  border-color: var(--lime);
+}
+.group-choice input:focus-visible + span {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+.group-empty {
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.6;
+  margin: 10px 0;
+}
+.group-picker-footer {
+  position: sticky;
+  bottom: 0;
+  background: var(--white);
+  border-top: 1px solid var(--line);
+  padding: 20px 30px 26px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  justify-content: space-between;
+}
+.group-selection {
+  min-width: 0;
+  flex: 1;
+}
+#groupSelectionLabel {
+  font-size: 0.94rem;
+  font-weight: 750;
+}
+#groupMembers {
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+#confirmGroup {
+  flex-shrink: 0;
+  min-height: 46px;
+  font-size: 0.94rem;
+}
+#confirmGroup:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.reminders-page .page-intro > p {
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 12px 0 28px;
+}
+.reminders-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 24px;
+  align-items: start;
+}
+.reminder-card {
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--white);
+  padding: 28px;
+  min-width: 0;
+}
+.reminder-card h2 {
+  font-size: 1.3rem;
+  letter-spacing: -0.035em;
+  margin: 0;
+  line-height: 1.3;
+}
+.reminder-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.reminder-card-heading p {
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 6px 0 0;
+}
+.reminder-symbol {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--lime);
+  color: var(--accent-ink);
+}
+.reminder-group {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-bottom: 25px;
+  background: var(--control);
+}
+.reminder-group span {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+.reminder-group strong {
+  font-size: 1.2rem;
+}
+.reminder-group button {
+  font-size: 0.875rem;
+  background: var(--white);
+  min-height: 44px;
+}
+.reminder-label,
+.reminder-custom > span {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 650;
+  color: var(--ink);
+}
+.reminder-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 22px;
+}
+.reminder-presets button {
+  border: 1px solid var(--line);
+  background: var(--control);
+  color: var(--ink);
+  padding: 10px 15px;
+  min-height: 44px;
+  border-radius: 11px;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+.reminder-presets button[aria-pressed="true"] {
+  background: var(--lime);
+  border-color: var(--lime);
+  color: var(--accent-ink);
+}
+.reminder-custom input {
+  width: 100%;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.reminder-card .help {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin: 10px 0 20px;
+}
+.reminder-status {
+  background: var(--control);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+.reminder-status:empty {
+  display: none;
+}
+.reminder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.reminder-actions button {
+  font-size: 0.875rem;
+  min-height: 44px;
+}
+.reminder-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.reminder-install h2 {
+  margin: 12px 0;
+  font-size: 1.6rem;
+}
+#installHelp,
+.reminder-install-note p {
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.7;
+}
+.reminder-install-note {
+  border-top: 1px solid var(--line);
+  margin-top: 26px;
+  padding-top: 22px;
+}
+.reminder-install-note strong {
+  font-size: 0.94rem;
+}
+.reminder-install-note p {
+  margin-bottom: 0;
+  font-size: 0.875rem;
+}
+@media (max-width: 760px) {
+  .top-actions .desktop-page {
+    display: none;
+  }
+  .group-trigger {
+    min-height: 42px;
+    padding: 7px 10px;
+    gap: 7px;
+  }
+  .group-trigger-icon,
+  .group-trigger small {
+    display: none;
+  }
+  .top-actions {
+    gap: 7px;
+  }
+  .mobile-nav button,
+  .mobile-nav a {
+    min-width: 0;
+    flex: 1;
+    padding: 0;
+    font-size: 0.75rem;
+  }
+  .mobile-nav button[aria-current="page"] {
+    color: var(--ink);
+    font-weight: 800;
+  }
+  .mobile-nav button[aria-expanded="true"] {
+    color: var(--ink);
+  }
+  .reminders-layout {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .reminder-card {
+    padding: 22px;
+    border-radius: 20px;
+  }
+  .reminder-card-heading {
+    gap: 12px;
+  }
+  .reminder-actions .primary {
+    flex-basis: 100%;
+  }
+  .reminder-actions .secondary {
+    flex: 1;
+  }
+  .reminder-presets {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .reminder-presets button {
+    flex: 1;
+    padding: 10px 6px;
+    white-space: nowrap;
+  }
+  .group-picker {
+    width: 100%;
+    max-height: calc(100dvh - max(18px, env(safe-area-inset-top)));
+    margin: auto 0 0;
+    border-bottom: 0;
+    border-radius: 24px 24px 0 0;
+  }
+  .group-picker-head {
+    padding: 24px 22px 0;
+  }
+  #groupDialogHelp {
+    margin: 12px 22px 20px;
+    font-size: 0.875rem;
+  }
+  .group-search {
+    margin: 0 22px 20px;
+  }
+  .group-picker-scroll {
+    padding: 0 22px 22px;
+  }
+  .group-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .group-choice > span {
+    min-height: 54px;
+    font-size: 1rem;
+  }
+  .group-picker-footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 16px;
+    padding: 18px 22px max(22px, env(safe-area-inset-bottom));
+  }
+  #confirmGroup {
+    width: 100%;
+  }
+  .group-picker .close-button {
+    width: 36px;
+    height: 36px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .group-choice > span {
+    transition: none;
+  }
+}
+
+@media (max-width: 369px) {
+  .reminder-presets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

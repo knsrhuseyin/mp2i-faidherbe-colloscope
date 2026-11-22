@@ -28,6 +28,10 @@ Ouvre ensuite `http://127.0.0.1:8080`.
 - `admin.mjs` : édition, import/export et sauvegarde du brouillon avec sa version d’origine.
 - `api-client.mjs` : client JSON commun au planning, aux Documents et aux rappels ; lectures simultanées regroupées par session, délai maximal et annulation explicite. Les écritures ne sont jamais regroupées ni réémises automatiquement.
 - `dom.mjs` : mise à jour des blocs et lignes conservées par identifiant. Les boutons gardent leur focus et la bande des semaines n’est recentrée que lors d’une sélection explicite.
-- le lien vers Prépa Sync et `notifications.js` : espace Documents et rappels. Une recherche obsolète ou une fermeture de l’espace Documents annule ses lectures en cours.
+- `navigation.js` : pages Planning, Documents et Rappels, liens directs `#planning`, `#documents`, `#rappels`, historique du navigateur et rubrique active.
+- `group-picker.js` : choix du groupe partagé entre ordinateur et mobile, recherche par groupe ou nom, confirmation et mémorisation locale.
+- `documents.js` : bibliothèque privée Prépa Sync ; quitter la page annule ses lectures en cours.
+- `notifications.js` : installation PWA, abonnements et réglages dans la page Rappels, avec délais rapides ou personnalisés.
+- `navigation.css` : mise en page des nouvelles rubriques et du choix des groupes à partir des couleurs du thème actif.
 
 Les modules sont ajoutés au cache de la coque PWA. Les réponses de l’API, documents et sessions restent hors de ce cache.

@@ -90,7 +90,13 @@ test("private library unlocks filters and forgets", async ({ page }) => {
   expect(
     await page.evaluate(() => localStorage.getItem("collo-prepa-sync-read-key-v1")),
   ).toBeNull();
-  await page.locator("#documentsBack").click();
+  await page
+    .locator(
+      test.info().project.name === "mobile"
+        ? "#mobilePlanning"
+        : ".desktop-page[data-page=planning]",
+    )
+    .click();
   await expect(page.locator("#planning")).toBeVisible();
   expect(errors).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);

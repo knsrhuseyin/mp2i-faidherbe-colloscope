@@ -300,7 +300,10 @@ async function handle(request, env) {
   if (!originIsAllowed(request, env)) return json(request, env, { error: "Origine refusée" }, 403);
 
   const catalogue = await prepaDocuments(request, env);
-  if (catalogue) {const {status=200,...body}=catalogue;return json(request,env,body,status);}
+  if (catalogue) {
+    const { status = 200, ...body } = catalogue;
+    return json(request, env, body, status);
+  }
 
   if (
     url.pathname.startsWith("/api/documents/") ||

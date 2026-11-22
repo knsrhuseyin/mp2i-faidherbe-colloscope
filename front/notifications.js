@@ -2,11 +2,11 @@
  * Rappels de cet appareil : installation PWA, permission, abonnement et groupe choisi.
  * Le Worker programme les envois ; le navigateur ne calcule pas de rappels en arrière-plan.
  */
+import { currentPage } from "./navigation.js";
 import { api } from "./api-client.mjs";
 
 (() => {
   const $ = (s) => document.querySelector(s);
-  const dialog = $("#notificationsDialog");
   const status = $("#pushStatus");
   const key = "collo-reminders-v1";
   let registration, config, installPrompt;
@@ -72,9 +72,10 @@ import { api } from "./api-client.mjs";
     : ios
       ? "Sur iPhone (iOS 16.4+), ouvre Collo dans Safari, puis Partager → Sur l’écran d’accueil. Ouvre ensuite l’icône Collo pour activer les rappels."
       : "Installe Collo avec le bouton ci-dessous ou le menu du navigateur → Installer l’application / Ajouter à l’écran d’accueil.";
-  $("#notificationsOpen").onclick = async () => {
+  async function prepareReminders() {
     $("#reminderMinutes").value = saved.reminders.join(", ");
-    dialog.showModal();
+    updatePresets();
+    summary();
     buttons.forEach((b) => (b.disabled = true));
     show("Vérification des notifications…");
     try {
@@ -104,8 +105,46 @@ import { api } from "./api-client.mjs";
     } catch (e) {
       show(e.message);
     }
-  };
-  $("#notificationsClose").onclick = () => dialog.close();
+  }
+  window.addEventListener("collo-page-change", (event) => {
+    if (event.detail.page === "rappels") prepareReminders();
+  });
+  if (currentPage() === "rappels") prepareReminders();
+  function summary() {
+    $("#reminderSummary").textContent = saved.enabled
+      ? `Rappels actifs · Groupe ${saved.group}`
+      : "Rappels désactivés sur cet appareil";
+  }
+  function updatePresets() {
+    const values = $("#reminderMinutes")
+      .value.split(",")
+      .map((x) => Number(x.trim()));
+    document
+      .querySelectorAll("[data-reminder]")
+      .forEach((button) =>
+        button.setAttribute(
+          "aria-pressed",
+          String(values.includes(Number(button.dataset.reminder))),
+        ),
+      );
+  }
+  $("#reminderMinutes").addEventListener("input", updatePresets);
+  document.querySelectorAll("[data-reminder]").forEach((button) =>
+    button.addEventListener("click", () => {
+      const value = Number(button.dataset.reminder);
+      let values;
+      try {
+        values = minutes();
+      } catch {
+        values = [];
+      }
+      if (values.includes(value)) values = values.filter((item) => item !== value);
+      else if (values.length < 5) values.push(value);
+      else return show("Tu peux choisir jusqu’à 5 délais.");
+      $("#reminderMinutes").value = values.sort((a, b) => a - b).join(", ");
+      updatePresets();
+    }),
+  );
   function minutes() {
     const raw = $("#reminderMinutes").value.trim();
     const parts = raw.split(",").map((s) => s.trim());
@@ -120,6 +159,7 @@ import { api } from "./api-client.mjs";
     await call("subscribe", { subscription: subscription.toJSON(), group, reminders });
     saved = { ...saved, enabled: true, group, reminders };
     persist();
+    summary();
   }
   $("#pushSave").onclick = async () => {
     const button = $("#pushSave");
@@ -167,6 +207,7 @@ import { api } from "./api-client.mjs";
       const sub = await registration.pushManager.getSubscription();
       saved.enabled = false;
       persist();
+      summary();
       if (sub) await sub.unsubscribe();
       $("#pushTest").disabled = true;
       show("Rappels désactivés sur cet appareil.");
