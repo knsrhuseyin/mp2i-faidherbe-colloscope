@@ -1,0 +1,31 @@
+{
+  "source": "Colles Informatiques semestre 1 — photo transmise le 28 novembre 2026",
+  "program": "Toutes les notions de C et OCaml au programme de MP2I ont été vues. Listes chaînées en C. Analyse d’algorithmes : terminaison, correction, complexité. Les algorithmes de tri n’ont pas encore été vus.",
+  "examiner": "Colleur à préciser",
+  "room": null,
+  "recomposed_from": [1, 7, 13, 15, 16],
+  "groups": [
+    {"id": 18, "label": "G18 · Info", "members_raw": "Baudier Christian, Coyssi Valentin, Guilbert David, Akharaz Youcef"},
+    {"id": 19, "label": "G19 · Info", "members_raw": "Grandvuinet Louis, Chmeiss Rami, Delannay Mathis"},
+    {"id": 20, "label": "G20 · Info", "members_raw": "Rimbault Paul, Loubet Alexandre, Piganiol Guillaume"},
+    {"id": 21, "label": "G21 · Info", "members_raw": "Parmentier Pierre, Pommeret Martin, Roisin Gabryel, Szablewski Joao"}
+  ],
+  "sessions": [
+    {"date": "2026-12-07", "start": "08:00", "end": "09:00", "group": 3},
+    {"date": "2026-12-07", "start": "09:00", "end": "10:00", "group": 5},
+    {"date": "2026-12-07", "start": "10:00", "end": "11:00", "group": 2},
+    {"date": "2026-12-07", "start": "11:00", "end": "12:00", "group": 4},
+    {"date": "2026-12-14", "start": "08:00", "end": "09:00", "group": 6},
+    {"date": "2026-12-14", "start": "09:00", "end": "10:00", "group": 8},
+    {"date": "2026-12-14", "start": "10:00", "end": "11:00", "group": 9},
+    {"date": "2026-12-14", "start": "11:00", "end": "12:00", "group": 11},
+    {"date": "2027-01-04", "start": "08:00", "end": "09:00", "group": 14},
+    {"date": "2027-01-04", "start": "09:00", "end": "10:00", "group": 17},
+    {"date": "2027-01-04", "start": "10:00", "end": "11:00", "group": 10},
+    {"date": "2027-01-04", "start": "11:00", "end": "12:00", "group": 12},
+    {"date": "2027-01-11", "start": "08:00", "end": "09:00", "group": 18},
+    {"date": "2027-01-11", "start": "09:00", "end": "10:00", "group": 19},
+    {"date": "2027-01-11", "start": "10:00", "end": "11:00", "group": 20},
+    {"date": "2027-01-11", "start": "11:00", "end": "12:00", "group": 21}
+  ]
+}
